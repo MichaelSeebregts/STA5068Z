@@ -98,7 +98,7 @@ legenTarget(3, 5, xSeq)
 
 set.seed(2023)
 
-underlying = function(x, a, b)
+underlying = function(x)
 {
 
   y = rep(0, length(x))
@@ -115,24 +115,20 @@ underlying = function(x, a, b)
     }
   }
   
-  return(list(y = y))
+  return( y)
+}
+
+DGP = function(N, sigma)
+{
+  x = runif(N, -2, 2)
+  e = rnorm(N, 0, sigma)
+  y = underlying(x) + e
+  return(list(x = x, y = y))
 }
 
 xBase = seq(-2, 2, length.out = 500)
-runUnderlying = underlying(xBase, -2, 2)
-plot(xBase, runUnderlying$y, type = "l")
-
-x1 = runif(5, -2, 2)
-x2 = runif(5, -2, 2)
-x3 = runif(5, -2, 2)
-x4 = runif(5, -2, 2)
-x5 = runif(5, -2, 2)
-
-run1 = underlying(x1, -2, 2)
-run2 = underlying(x2, -2, 2)
-run3 = underlying(x3, -2, 2)
-run4 = underlying(x4, -2, 2)
-run5 = underlying(x5, -2, 2)
+runUnderlying = underlying(xBase)
+plot(xBase, runUnderlying, type = "l")
 
 hyp1 = function(x, xPred, y, color, plt)
 {
@@ -144,7 +140,7 @@ hyp1 = function(x, xPred, y, color, plt)
   {
     lines(xPred, pred, col = color) 
   }
-  return(y)
+  return(pred)
 }
 
 hyp2 = function(x, xPred, y, color, plt)
@@ -155,34 +151,41 @@ hyp2 = function(x, xPred, y, color, plt)
   {
     lines(xPred, pred, col = color)
   }
-  return(y)
+  return(pred)
 }
-plot(xBase, runUnderlying$y, type = "l")
-hyp1(x1, xBase, run1$y, "red", TRUE)
-points(x1, run1$y, col = "red", type = "p", lwd = 5)
-hyp1(x2, xBase, run2$y, "blue", TRUE)
-points(x2, run2$y, col = "blue", type = "p", lwd = 5)
-hyp1(x3, xBase, run3$y, "green", TRUE)
-points(x3, run3$y, col = "green", type = "p", lwd = 5)
-hyp1(x4, xBase, run4$y, "pink", TRUE)
-points(x4, run4$y, col = "pink", type = "p", lwd = 5)
-hyp1(x5, xBase, run5$y, "magenta", TRUE)
-points(x5, run5$y, col = "magenta", type = "p", lwd = 5)
 
-plot(xBase, runUnderlying$y, type = "l")
-hyp2(x1, xBase, run1$y, "red", TRUE)
-points(x1, run1$y, col = "red", type = "p", lwd = 5)
-hyp2(x2, xBase, run2$y, "blue", TRUE)
-points(x2, run2$y, col = "blue", type = "p", lwd = 5)
-hyp2(x3, xBase, run3$y, "green", TRUE)
-points(x3, run3$y, col = "green", type = "p", lwd = 5)
-hyp2(x4, xBase, run4$y, "pink", TRUE)
-points(x4, run4$y, col = "pink", type = "p", lwd = 5)
-hyp2(x5, xBase, run5$y, "magenta", TRUE)
-points(x5, run5$y, col = "magenta", type = "p", lwd = 5)
+dgp1 = DGP(5, 0)
+dgp2 = DGP(5, 0)
+dgp3 = DGP(5, 0)
+dgp4 = DGP(5, 0)
+dgp5 = DGP(5, 0)
+
+plot(xBase, runUnderlying, type = "l")
+hyp1(dgp1$x, xBase, dgp1$y, "red", TRUE)
+points(dgp1$x, dgp1$y, col = "red", type = "p", lwd = 5)
+hyp1(dgp2$x, xBase, dgp2$y, "blue", TRUE)
+points(dgp2$x, dgp2$y, col = "blue", type = "p", lwd = 5)
+hyp1(dgp3$x, xBase, dgp3$y, "green", TRUE)
+points(dgp3$x, dgp3$y, col = "green", type = "p", lwd = 5)
+hyp1(dgp4$x, xBase, dgp4$y, "pink", TRUE)
+points(dgp4$x, dgp4$y, col = "pink", type = "p", lwd = 5)
+hyp1(dgp5$x, xBase, dgp5$y, "magenta", TRUE)
+points(dgp5$x, dgp5$y, col = "magenta", type = "p", lwd = 5)
+
+plot(xBase, runUnderlying, type = "l")
+hyp2(dgp1$x, xBase, dgp1$y, "red", TRUE)
+points(dgp1$x, dgp1$y, col = "red", type = "p", lwd = 5)
+hyp2(dgp2$x, xBase, dgp2$y, "blue", TRUE)
+points(dgp2$x, dgp2$y, col = "blue", type = "p", lwd = 5)
+hyp2(dgp3$x, xBase, dgp3$y, "green", TRUE)
+points(dgp3$x, dgp3$y, col = "green", type = "p", lwd = 5)
+hyp2(dgp4$x, xBase, dgp4$y, "pink", TRUE)
+points(dgp4$x, dgp4$y, col = "pink", type = "p", lwd = 5)
+hyp2(dgp5$x, xBase, dgp5$y, "magenta", TRUE)
+points(dgp5$x, dgp5$y, col = "magenta", type = "p", lwd = 5)
 
 
-bias_var = function(N, M, hyp, dx)
+bias_var = function(N, M, hyp, dx, sig)
 {
   xx_lat = seq(-2, +2, dx)
   Nx = length(xx_lat)
@@ -194,39 +197,41 @@ bias_var = function(N, M, hyp, dx)
   testError = 0
   for (i in 1:M)
   {
-    resTemp = underlying(5, -2, 2, TRUE)
+    dat = DGP(N, sig)
+    x = dat$x
+    y = dat$y
     
     if (hyp == 1)
     {
-      resModelTemp = hyp1(xx_lat, resTemp$y, "", FALSE)
-      g_D = resModelTemp
+      mod = lm(y ~ x)
       
     }
     if (hyp == 2)
     { 
-      g_D = hyp2(xx_lat, resTemp$y, "", FALSE)
+      mod = lm(y ~ sin(pi*x) + cos(pi*x) - 1)
     }
-    print(g_D)
+    g_D = predict(mod, newdata = data.frame(x = xx_lat))
+
     G_D[i, ] = g_D
     gBar = gBar + g_D
     
-    dat_oos = underlying(N, -2, 2, TRUE)
-    pred_oos = predict(resModelTemp, data.frame(x = dat_oos$x))
-    testErrorD = mean((dat_oos$y - pred_oos)^2)
+    datOOS = DGP(N, sig)
+    pred_oos = predict(mod, data.frame(x = datOOS$x))
+    testErrorD = mean((datOOS$y - pred_oos)^2)
     testError = testError + testErrorD
   }
   
   gBar = gBar/M
   
   phi_x = 1/2
-  bias2 = (gBar - f(xx_lat))[-Nx]^2*phi_x*dx
+  bias2 = (gBar - underlying(xx_lat))[-Nx]^2*phi_x*dx
   bias2
   
   
   testError = testError/M
   
   ones = matrix(1, M, 1)
-  varAtX = colSums((G_D - ones%*%g_bar)^2)/M # calculate variance at each point x
+  varAtX = colSums((G_D - ones%*%gBar)^2)/M # calculate variance at each point x
   var = sum(varAtX[-Nx]*phi_x*dx) # Usual riemann integral 
   var
   
@@ -235,7 +240,7 @@ bias_var = function(N, M, hyp, dx)
   return(list("testError" = testError, "biasSquared" = bias2, "variance" = var))
 }
 
-bias_var(5, 1000, 1, 1/100)
+bias_var(5, 1000, 1, 1/100, 0)
 
 ###
 

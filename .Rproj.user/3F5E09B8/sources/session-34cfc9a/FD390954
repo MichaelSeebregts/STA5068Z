@@ -3,7 +3,7 @@
     "path": "F:/.University/5th Year/STA5068Z/Etienne Code/Lecture 4 Bias-Variance Dynamics (Complete).R",
     "project_path": null,
     "type": "r_source",
-    "hash": "4112917255",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1761035122017.0,
@@ -11,7 +11,9 @@
     "relative_order": 1,
     "properties": {
         "source_window_id": "",
-        "Source": "Source"
+        "Source": "Source",
+        "cursorPosition": "75,37",
+        "scrollLine": "45"
     },
     "folds": "",
     "lastKnownWriteTime": 1761033895,

@@ -1,0 +1,91 @@
+rm(list=ls())
+# Set up a target function/pattern:
+f = function(x){sin(pi*x)}
+
+# Write a function that generates a data set of size N 
+# with pattern f. Return a list of predictors (x) and responses (y).
+dgp = function(N,f,sig2 = 0)
+{
+   x = runif(N,-1,+1) 
+   e = rnorm(N,0,sqrt(sig2))
+   y = f(x)+e
+   return(list(x = x, y = y))
+}
+res = dgp(2,f)
+res
+# Plot a single realization of the data and overlay the target function:
+plot(res$y~res$x,xlim = c(-1,1), ylim = c(-1,1), type = 'n')
+dx     = 1/100
+xx_lat = seq(-1,+1,dx)
+lines(f(xx_lat)~xx_lat,lwd =2)
+
+#res_model = lm(y~x, data = res)
+#pred      = predict(res_model,data.frame(x = xx_lat))
+#lines(pred~xx_lat)
+
+
+
+
+# Calculate the (squared) bias for an appropriate H. 
+# Use M = 1000 draws of the data and a step-size of dx = 1/100 for 
+# the left-(end)point approximation to the relevant integral.
+bias_var = function(N,order,sig2,M = 5000,dx = 1/100)
+{
+  xx_lat = seq(-1,+1,dx)
+  Nx     = length(xx_lat)
+  g_bar  = xx_lat*0
+  G_D    = matrix(0,M,Nx)
+  test_error_D = 0
+  test_error = 0
+  for(i in 1:M)
+  {
+	  dat       = dgp(N,f,sig2)
+	  if(order == 0)
+	  {
+	    res_model = lm(y~1, data = dat)
+	  }
+	  if(order > 0 )
+	  {
+	  	 res_model = lm(y~poly(x,order), data = dat)
+	  }
+	  g_D       = predict(res_model,data.frame(x = xx_lat)) # predictions for this realisation
+	  G_D[i,]   = g_D # store those
+	  
+	  g_bar     = g_bar+g_D # Accumulate to average later
+	 
+	  dat_oos = dgp(N,f,sig2)
+	  pred_oos = predict(res_model,data.frame(x = dat_oos$x))
+	  test_error_D = mean((dat_oos$y-pred_oos)^2) # A point estimate using this realisation
+    test_error = test_error+test_error_D
+  }
+  g_bar      = g_bar/M # Average over simulations
+  test_error = test_error/M
+ 
+ plot(res$y~res$x,xlim = c(-1,1), ylim = c(-1,1), type = 'n')
+ lines(f(xx_lat)~xx_lat,lwd =2)
+ lines(g_bar~xx_lat,lwd = 2, col = 4)
+ segments(xx_lat,f(xx_lat),xx_lat,g_bar, col = 'grey')
+ phi_x = 1/2
+ bias2 = sum((g_bar-f(xx_lat))[-Nx]^2*phi_x*dx)
+ #bias2
+
+
+ # Calculate the variance for an appropriate H. 
+ # This integration involves two steps.
+ ones = matrix(1,M,1)
+ var_at_x = colSums((G_D-ones%*%g_bar)^2)/M # Calculate variance at each point x (Step 1)
+ var      = sum(var_at_x[-Nx]*phi_x*dx)    # Step 2 - Usual Riemann integral
+ #var
+
+ both = bias2+var
+ #both
+# Calculate the expected Out-of-Sample error (over all D).
+# Use sample estimates for M simulations. 
+# Call it Test_Error
+ #test_error
+ ret = list(bias2 = bias2, var = var, both = both, test_error = test_error)
+ return(ret)
+}
+
+rbind(bias_var(N = 5,order = 0,sig2 = 0.5,M = 5000,dx = 1/100),
+	    bias_var(N = 5,order = 1,sig2 = 0.5,M = 5000,dx = 1/100))

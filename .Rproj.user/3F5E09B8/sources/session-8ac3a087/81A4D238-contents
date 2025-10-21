@@ -1,0 +1,354 @@
+library(readxl)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(splines)
+library(forecast)
+library(tibble)
+
+# 
+ages = read_excel("TRTLIN001 PLLSHA056 SBRMIC008 Complete Data (2).xlsx", sheet = "Pensioner & Dependants ratio")
+
+# #### AGES 
+# 
+agesDF = data.frame("Time" = ages$Years, "Open Scheme Average Age" = ages$`Open Scheme Average Age`, "Closed Scheme Average Age" = ages$`Closed Scheme Average Age`, 
+                     "Total Average Age" = ages$`Total Average Age`)
+# 
+agesDF = data.frame("Time" = ages$Years, "Open Scheme Average Age" = ages$`Open Scheme Average Age`, "Closed Scheme Average Age" = ages$`Closed Scheme Average Age`, 
+                     "Total Average Age" = ages$`Total Average Age`)
+agesDFClean = agesDF[5:21,]
+
+
+ages <- read_excel(
+  "TRTLIN001 PLLSHA056 SBRMIC008 Complete Data (2).xlsx",
+  sheet = "Pensioner & Dependants ratio"
+)
+
+agesDFClean <- tibble(
+  Time   = ages$Years,
+  Open   = ages$`Open Scheme Average Age`,
+  Closed = ages$`Closed Scheme Average Age`,
+  Total  = ages$`Total Average Age`
+) |> slice(5:21) |> arrange(Time)
+
+H      <- 19   # forecast horizon (years)
+LEVEL  <- 80L  # CI level
+pal3   <- c("Total"="#1f77b4","Open"="#2ca02c","Closed"="#d62728")
+
+make_ts <- function(values, years) {
+  ts(as.numeric(values), start = min(years, na.rm = TRUE), frequency = 1)
+}
+
+
+.pick_ci <- function(fc, side = c("lower","upper"), level = LEVEL) {
+  side <- match.arg(side)
+  n <- length(fc$mean)
+  want <- paste0(level, "%")
+  mat <- if (side == "lower") fc$lower else fc$upper
+  
+  if (!is.null(mat) && length(mat)) {
+    if (!is.null(colnames(mat)) && want %in% colnames(mat)) {
+      as.numeric(mat[, want, drop = TRUE])
+    } else {
+      as.numeric(mat[, 1, drop = TRUE])
+    }
+  } else if (!is.null(fc$se)) {
+    z <- qnorm(0.5 + level/200)
+    m <- as.numeric(fc$mean)
+    if (side == "lower") m - z * as.numeric(fc$se) else m + z * as.numeric(fc$se)
+  } else {
+    as.numeric(fc$mean) # zero-width band fallback
+  }
+}
+
+
+tidy_fc_touch <- function(fc, series, last_year, last_val, level = LEVEL) {
+  n     <- length(fc$mean)
+  y0    <- as.integer(round(last_year))
+  years <- seq(y0 + 1L, by = 1L, length.out = n)
+  
+  lo <- .pick_ci(fc, "lower", level)
+  hi <- .pick_ci(fc, "upper", level)
+  
+  dplyr::bind_rows(
+    tibble(Year = y0,   series = series, mean = as.numeric(last_val),
+           lo80 = as.numeric(last_val), hi80 = as.numeric(last_val)),
+    tibble(Year = years, series = series,
+           mean = as.numeric(fc$mean), lo80 = lo, hi80 = hi)
+  )
+}
+
+tidy_hist <- function(x_ts, series) {
+  tibble(Year = as.numeric(time(x_ts)),
+         value = as.numeric(x_ts),
+         series = series)
+}
+
+fit_auto_noseas <- function(x_ts) {
+  auto.arima(x_ts, seasonal = FALSE, stepwise = TRUE, approximation = FALSE)
+}
+
+total_age_ts  <- make_ts(agesDFClean$Total,  agesDFClean$Time)
+open_age_ts   <- make_ts(agesDFClean$Open,   agesDFClean$Time)
+closed_age_ts <- make_ts(agesDFClean$Closed, agesDFClean$Time)
+
+fitT <- Arima(total_age_ts, order = c(0,1,0), include.drift = TRUE)
+fitO <- fit_auto_noseas(open_age_ts)
+
+fcT  <- forecast(fitT, h = H, level = LEVEL)
+fcO  <- forecast(fitO, h = H, level = LEVEL)
+
+hist_total_df <- tidy_hist(total_age_ts, "Total")
+hist_open_df  <- tidy_hist(open_age_ts,  "Open")
+
+fc_total_df <- tidy_fc_touch(
+  fcT, "Total",
+  last_year = tail(time(total_age_ts), 1),
+  last_val  = tail(as.numeric(total_age_ts), 1),
+  level = LEVEL
+)
+
+fc_open_df <- tidy_fc_touch(
+  fcO, "Open",
+  last_year = tail(time(open_age_ts), 1),
+  last_val  = tail(as.numeric(open_age_ts), 1),
+  level = LEVEL
+)
+
+
+train_start <- 2011
+
+closed_train <- filter(agesDFClean, Time >= train_start)
+
+closed_age_ts_fit <- ts(
+  closed_train$Closed,
+  start = min(closed_train$Time), frequency = 1
+)
+
+fitC <- fit_auto_noseas(closed_age_ts_fit)
+fcC  <- forecast(fitC, h = H, level = LEVEL)
+
+
+hist_closed_df <- tidy_hist(closed_age_ts, "Closed")  # full history for plotting
+
+fc_closed_df <- tidy_fc_touch(
+  fcC, "Closed",
+  last_year = tail(time(closed_age_ts), 1),          # touch at 2021
+  last_val  = tail(as.numeric(closed_age_ts), 1),
+  level = LEVEL
+)
+
+hist_age_df <- bind_rows(hist_total_df, hist_open_df, hist_closed_df)
+fc_age_df   <- bind_rows(fc_total_df,   fc_open_df,  fc_closed_df)
+
+ggplot() +
+  geom_line(data = hist_age_df, aes(Year, value, colour = series), linewidth = 1) +
+  geom_ribbon(data = fc_age_df,  aes(Year, ymin = lo80, ymax = hi80, fill = series), alpha = 0.25) +
+  geom_line(data = fc_age_df,    aes(Year, mean, colour = series), linetype = 2, linewidth = 1) +
+  scale_colour_manual(values = pal3) +
+  scale_fill_manual(values = pal3) +
+  labs(x = "Year", y = "Average Age") +
+  theme_minimal(base_size = 12) +
+  guides(fill = "none", colour = guide_legend(title = "Series"))
+
+
+
+ages   <- read_excel("TRTLIN001 PLLSHA056 SBRMIC008 Complete Data (2).xlsx",
+                     sheet = "Pensioner & Dependants ratio")
+claims <- read_excel("TRTLIN001 PLLSHA056 SBRMIC008 Complete Data (2).xlsx",
+                     sheet = "Claims")
+
+savings <- read_excel("Savings rate data.xlsx", sheet = "Sheet1",
+                      col_names = FALSE, col_types = c("numeric","numeric")) |>
+  setNames(c("year","savings")) |>
+  arrange(year)
+
+labour  <- read_excel("Labour force data.xlsx", sheet = "Sheet1", col_names = FALSE) |>
+  setNames(c("year","labourForce")) |>
+  arrange(year)
+
+
+make_ts <- function(values, years) {
+  ts(as.numeric(values), start = min(years, na.rm = TRUE), frequency = 1)
+}
+
+fit_auto_noseas <- function(x_ts, level = 80L, h) {
+  fit <- auto.arima(x_ts, seasonal = FALSE, stepwise = TRUE, approximation = FALSE)
+  fc  <- forecast(fit, h = h, level = level)
+  list(fit = fit, fc = fc)
+}
+
+tidy_hist <- function(x_ts, series_name) {
+  tibble(Year = time(x_ts), value = as.numeric(x_ts), series = series_name)
+}
+
+tidy_fc_touch <- function(fc, series_name, last_year, last_val, level = 80L) {
+  lo_name <- paste0(level, "%")
+  tibble(
+    Year  = time(fc$mean),
+    mean  = as.numeric(fc$mean),
+    lo80  = as.numeric(fc$lower[, lo_name]),
+    hi80  = as.numeric(fc$upper[, lo_name]),
+    series = series_name
+  ) |>
+    add_row(Year = last_year, mean = last_val,
+            lo80 = last_val, hi80 = last_val,
+            series = series_name, .before = 1)
+}
+
+fit_rw_nonneg_drift <- function(x_ts, name, h, level = 80L) {
+  fit_try <- Arima(x_ts, order = c(0,1,0), include.drift = TRUE)
+  dr <- suppressWarnings(coef(fit_try)["drift"])
+  # only clamp if negative
+  if (!is.na(dr) && dr < 0) {
+    fit <- Arima(x_ts, order = c(0,1,0), include.drift = TRUE, fixed = 0)
+  } else {
+    fit <- fit_try
+  }
+  fc <- forecast(fit, h = h, level = level)
+  list(
+    fit  = fit,
+    hist = tibble(Year = time(x_ts), value = as.numeric(x_ts), series = name),
+    fc   = tidy_fc_touch(fc, name, tail(time(x_ts),1), tail(as.numeric(x_ts),1), level = level)
+  )
+}
+
+
+plot_multi <- function(hist_df, fc_df, title, ylab, palette) {
+  ggplot() +
+    geom_line(data = hist_df, aes(Year, value, colour = series), linewidth = 1) +
+    geom_ribbon(data = fc_df, aes(Year, ymin = lo80, ymax = hi80, fill = series), alpha = 0.25) +
+    geom_line(data = fc_df, aes(Year, mean, colour = series), linetype = 2, linewidth = 1) +
+    scale_colour_manual(values = palette) +
+    scale_fill_manual(values   = palette) +
+    labs(x = "Year", y = ylab) +
+    theme_minimal(base_size = 12) +
+    guides(fill = "none", colour = guide_legend(title = "Series"))
+}
+
+plot_single <- function(hist_df, fc_df, title, ylab, colour) {
+  ggplot() +
+    geom_line(data = hist_df, aes(Year, value), colour = colour, linewidth = 1) +
+    geom_ribbon(data = fc_df, aes(Year, ymin = lo80, ymax = hi80), fill = colour, alpha = 0.25) +
+    geom_line(data = fc_df, aes(Year, mean), colour = colour, linetype = 2, linewidth = 1) +
+    labs(x = "Year", y = ylab) +
+    theme_minimal(base_size = 12)
+}
+
+pal3 <- c(
+  "Total"  = "#1f77b4",  # blue
+  "Open"   = "#2ca02c",  # green
+  "Closed" = "#d62728"   # red
+)
+
+agesDF <- tibble(
+  Time  = ages$Years,
+  Open  = ages$`Open Scheme Average Age`,
+  Closed= ages$`Closed Scheme Average Age`,
+  Total = ages$`Total Average Age`
+)
+
+agesDFClean <- agesDF[5:21, ] |> arrange(Time)
+
+total_age_ts  <- make_ts(agesDFClean$Total,  agesDFClean$Time)
+open_age_ts   <- make_ts(agesDFClean$Open,   agesDFClean$Time)
+closed_age_ts <- make_ts(agesDFClean$Closed, agesDFClean$Time)
+h = 15
+
+claimsDF <- tibble(
+  Time   = claims$...1,
+  Open   = claims$`Nett claims incurred open schemes`,
+  Closed = claims$`Nett claims incurred closed schemes`,
+  Total  = claims$`Nett claims incurred total`
+)
+
+claimsDFClean <- claimsDF[5:21, ] |>
+  mutate(
+    Open   = Open   / 1e6,
+    Closed = Closed / 1e6,
+    Total  = Total  / 1e6
+  ) |>
+  arrange(Time)
+
+total_claims_ts  <- make_ts(claimsDFClean$Total,  claimsDFClean$Time)
+open_claims_ts   <- make_ts(claimsDFClean$Open,   claimsDFClean$Time)
+closed_claims_ts <- make_ts(claimsDFClean$Closed, claimsDFClean$Time)
+
+fitTc <- fit_auto_noseas(total_claims_ts, h = 19)
+fitOc <- fit_auto_noseas(open_claims_ts, h = 19)
+fitCc <- fit_auto_noseas(closed_claims_ts, h = 19)
+
+hist_claims_df <- bind_rows(
+  tidy_hist(total_claims_ts,  "Total"),
+  tidy_hist(open_claims_ts,   "Open"),
+  tidy_hist(closed_claims_ts, "Closed")
+)
+
+fc_claims_df <- bind_rows(
+  tidy_fc_touch(fitTc$fc, "Total",  tail(time(total_claims_ts),1),  tail(as.numeric(total_claims_ts),1)),
+  tidy_fc_touch(fitOc$fc, "Open",   tail(time(open_claims_ts),1),   tail(as.numeric(open_claims_ts),1)),
+  tidy_fc_touch(fitCc$fc, "Closed", tail(time(closed_claims_ts),1), tail(as.numeric(closed_claims_ts),1))
+)
+
+plot_multi(hist_claims_df, fc_claims_df,
+           ylab  = "Net Claims (Millions)",
+           palette = pal3)
+
+
+savings_ts <- make_ts(savings$savings, savings$year)
+fitS <- fit_auto_noseas(savings_ts, h = 16)
+
+hist_sav_df <- tidy_hist(savings_ts, "Savings rate")
+fc_sav_df   <- tidy_fc_touch(fitS$fc, "Savings rate",
+                             tail(time(savings_ts),1), tail(as.numeric(savings_ts),1))
+
+plot_single(hist_sav_df, fc_sav_df,
+            ylab  = "Savings rate",
+            colour = "#7f3c8d")   # consistent single-series colour
+
+
+labour_ts <- make_ts(labour$labourForce, labour$year)
+fitL <- fit_auto_noseas(labour_ts, h = 17)
+
+hist_lab_df <- tidy_hist(labour_ts, "Labour force")
+fc_lab_df   <- tidy_fc_touch(fitL$fc, "Labour force",
+                             tail(time(labour_ts),1), tail(as.numeric(labour_ts),1))
+
+plot_single(hist_lab_df, fc_lab_df,
+            ylab  = "Labour force",
+            colour = "#11a579")   # consistent single-series colour
+
+inflation <- read_excel(
+  "dependency ratios-1.xlsx",
+  sheet = "Inflation, Consumer %"
+)
+
+dependency <- read_excel(
+  "dependency ratios-1.xlsx",
+  sheet = "Age Dependency Ratio"
+)
+
+
+inflation_ts <- make_ts(inflation$`Inflation %`, inflation$Time)
+fitS <- fit_auto_noseas(inflation_ts, h = 16)
+
+hist_inf_df <- tidy_hist(inflation_ts, "Inflation Percentage")
+fc_inf_df   <- tidy_fc_touch(fitS$fc, "Inflation Percentage",
+                             tail(time(inflation_ts),1), tail(as.numeric(inflation_ts),1))
+
+plot_single(hist_inf_df, fc_inf_df,
+            ylab  = "Inflation (%)",
+            colour = "#e66101")   
+
+
+dependency_ts <- make_ts(dependency$`Age Dependency Ratio`, dependency$`Observation Date`)
+fitL <- fit_auto_noseas(dependency_ts, h = 16)
+
+hist_dep_df <- tidy_hist(dependency_ts, "Labour force")
+fc_dep_df   <- tidy_fc_touch(fitL$fc, "Labour force",
+                             tail(time(dependency_ts),1), tail(as.numeric(dependency_ts),1))
+
+plot_single(hist_dep_df, fc_dep_df,
+            ylab  = "Dependency Ratio",
+            colour = "#5e3c99")   
+

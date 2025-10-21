@@ -224,7 +224,7 @@ bias_var = function(N, M, hyp, dx, sig)
   gBar = gBar/M
   
   phi_x = 1/2
-  bias2 = (gBar - underlying(xx_lat))[-Nx]^2*phi_x*dx
+  bias2 = sum((gBar - underlying(xx_lat))[-Nx]^2*phi_x*dx)
   bias2
   
   
@@ -240,7 +240,10 @@ bias_var = function(N, M, hyp, dx, sig)
   return(list("testError" = testError, "biasSquared" = bias2, "variance" = var))
 }
 
-bias_var(5, 1000, 1, 1/100, 0)
+biasVarH1 = bias_var(5, 1000, 1, 1/100, 0)
+biasVarH2 = bias_var(5, 1000, 2, 1/100, 0)
+
+varyingH1 = data.frame()
 
 ###
 

@@ -1,0 +1,11 @@
+---
+title: "Assignment1"
+author: "Michael Seebregts"
+date: "2025-10-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+

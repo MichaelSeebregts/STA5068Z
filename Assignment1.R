@@ -13,7 +13,7 @@ legendre = function(order, x, sigma = 0)
   
 }
 
-xSeq = seq(-1, 1, by = 1/100)
+xSeq = seq(-1, 1, by = 1/500)
 
 l0 = legendre(0, xSeq)
 l1 = legendre(1, xSeq)
@@ -31,22 +31,40 @@ lines(xSeq, l5, col = "lightblue")
 
 set.seed(123)
 
-legenTarget = function(targets, Qf, x)
+legenTarget = function(targets, Qf, x, plot = TRUE, sigma = 0, beta = c())
 {
   
-  plot(x, legendre(Qf, x), type = "l")
+  if(plot == TRUE)
+  {
+    plot(x, legendre(Qf, x), type = "l")
+  }
   
   for(j in 1:targets)
   {
     f = 0
-    tempBeta = runif(Qf+1, -1, 1)
+    if (length(beta) == 0)
+    {
+      tempBeta = runif(Qf+1, -1, 1)
+    }
+    else
+    {
+      tempBeta = beta
+    }
+    
     for(i in 0:Qf)
     {
       f = f + tempBeta[i+1]*legendre(i, x)
     }
+    f = f + rnorm(length(x), 0, sigma)
     
-    lines(x, f, col = (j+2))
+    if (plot == TRUE)
+    {
+      lines(x, f, col = (j+2))
+    }
+    
   }
+  
+  return(invisible(f))
   
   
   
@@ -90,7 +108,129 @@ legenTarget(3, 5, xSeq)
 
 ### Q2
 
+# a
 
+pal  <- colorRampPalette(c("navy","cyan","yellow","red"))(100)
+sc   <- function(z, zmin, zmax) pmax(1, pmin(100, round(1 + 99*(z - zmin)/(zmax - zmin))))
+
+target = legendre(10, xSeq, 0)
+plot(target ~ xSeq, type = "l")
+
+NSeq = c(20:110)
+sigmaSeq = seq(0.2, 1.1, length.out = length(NSeq))
+
+overFitDF = data.frame()
+
+betaTemp = runif(11, -1, 1)
+
+#plot(1,1, type = "n", xlim = c(20, 110), ylim = c(0.2, 1.1))
+
+for (i in 1:length(NSeq))
+{
+  #overFitRow = c()
+  
+  for (j in 1:length(sigmaSeq))
+  {
+    xTemp = runif(NSeq[i], -1, 1)
+    yTemp = legenTarget(1, 10, xTemp, FALSE, sigmaSeq[j], betaTemp)
+    dat = data.frame(y = yTemp, x = xTemp)
+    H2  = lm(y ~ x + I(x^2), data = dat)
+    H10 = lm(y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) +
+               I(x^6) + I(x^7) + I(x^8) + I(x^9) + I(x^10), data = dat)
+    xOut = runif(500, -1, 1)
+    y2Pred = predict(H2, newdata = data.frame(x = xOut))
+    y10Pred = predict(H10, newdata = data.frame(x = xOut))
+    
+    yOut = legenTarget(1, 10, xOut, FALSE, 0, betaTemp)
+    
+    H2Error = mean((yOut - y2Pred)^2)
+    H10Error = mean((yOut - y10Pred)^2)
+    
+    overFitTemp = H10Error - H2Error
+    overFitDF[i, j] = overFitTemp
+    #points(NSeq[i], sigmaSeq[j], col = pal[ sc(overFitTemp, zmin, zmax) ])
+  }
+}
+
+zmin <- min(overFitDF, na.rm = TRUE)
+zmax <- max(overFitDF, na.rm = TRUE)
+
+plot(1, 1, type = "n", xlim = range(NSeq), ylim = range(sigmaSeq),
+     xlab = "N", ylab = "sigma")
+for (i in seq_along(NSeq)) {
+  for (j in seq_along(sigmaSeq)) {
+    points(NSeq[i], sigmaSeq[j],
+           col = pal[ sc(overFitDF[i, j], zmin, zmax) ],
+           pch = 16, cex = 0.6)
+  }
+}
+
+# pal <- colorRampPalette(c("navy","cyan","yellow","red"))
+# 
+# filled.contour(x = NSeq,
+#                y = sigmaSeq,
+#                z = t(overFitDF),
+#                color.palette = pal,
+#                xlab = "N", ylab = "sigma",
+#                plot.title = title(main = "Overfit heatmap"),
+#                nlevels = 50)
+
+# b
+
+Nseq2 = 20:60
+Order = 1:40
+sig = 0.2
+
+overFitDF2 = data.frame()
+
+#plot(1,1, type = "n", xlim = c(20, 110), ylim = c(0.2, 1.1))
+
+for (i in 1:length(Nseq2))
+{
+  #overFitRow = c()
+  
+  for (j in 1:length(Order))
+  {
+    xTemp = runif(NSeq[i], -1, 1)
+    yTemp = legenTarget(1, Order[j], xTemp, FALSE, sig)
+    dat = data.frame(y = yTemp, x = xTemp)
+    H2 = lm(y ~ poly(x, 2), data = dat)
+    H10 = lm(y ~ poly(x, 10), data = dat)
+    xOut = runif(500, -1, 1)
+    y2Pred = predict(H2, newdata = data.frame(x = xOut))
+    y10Pred = predict(H10, newdata = data.frame(x = xOut))
+    
+    yOut = legenTarget(1, Order[j], xOut, FALSE, 0)
+    
+    H2Error = mean((yOut - y2Pred)^2)
+    H10Error = mean((yOut - y10Pred)^2)
+    
+    overFitTemp = H10Error - H2Error
+    overFitDF2[i, j] = overFitTemp
+    #points(NSeq[i], sigmaSeq[j], col = pal[ sc(overFitTemp, zmin, zmax) ])
+  }
+}
+
+zmin <- min(overFitDF2, na.rm = TRUE)
+zmax <- max(overFitDF2, na.rm = TRUE)
+
+plot(1, 1, type = "n", xlim = range(Nseq2), ylim = range(Order),
+     xlab = "N", ylab = "sigma")
+for (i in seq_along(Nseq2)) {
+  for (j in seq_along(Order)) {
+    points(Nseq2[i], Order[j],
+           col = pal[ sc(overFitDF2[i, j], zmin, zmax) ],
+           pch = 16, cex = 0.6)
+  }
+}
+
+filled.contour(x = Nseq2,
+               y = Order,
+               z = t(overFitDF2),
+               color.palette = pal,
+               xlab = "N", ylab = "Order",
+               plot.title = title(main = "Overfit heatmap"),
+               nlevels = 50)
 
 ###
 
@@ -101,7 +241,7 @@ set.seed(2023)
 
 underlying = function(x)
 {
-
+  
   y = rep(0, length(x))
   for (j in 1:length(x))
   {
@@ -212,7 +352,7 @@ bias_var = function(N, M, hyp, dx, sig)
       mod = lm(y ~ sin(pi*x) + cos(pi*x) - 1)
     }
     g_D = predict(mod, newdata = data.frame(x = xx_lat))
-
+    
     G_D[i, ] = g_D
     gBar = gBar + g_D
     
@@ -375,8 +515,8 @@ res = neural_net(X,Y,theta_rand,m,0)
 set.seed(2022)
 
 M  = 100
-x1 = seq(-3,3,length = M)
-x2 = seq(-3,3,length = M)
+x1 = seq(min(dat$X1),max(dat$X1),length = M)
+x2 = seq(min(dat$X2), max(dat$X2),length = M)
 xx1 = rep(x1,M) 
 xx2 = rep(x2, each = M)
 points(xx2~xx1, pch = 16,cex = 0.75)

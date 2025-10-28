@@ -9,6 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 library(magick)
 library(kableExtra)
+library(GA)
 ```
 
 \newpage
@@ -157,7 +158,6 @@ model = function(X,theta,nodes)
   # Return a list of relevant objects:
   return(list(a3 = t(a3)))
 }
-set.seed(2024)
 p     = 2
 q     = 2
 nodes = 3
@@ -175,7 +175,7 @@ control = function(xt,pars)
 ```
 
 ```{r Q1bi}
-
+set.seed(2024)
 J       =  50  
 objects = draw_objects(J)
 xt      = draw_starts()
@@ -193,18 +193,13 @@ play_a_game = function(theta)
 }
 # play_a_game(theta_rand)
 
-library('GA')
 obj = play_a_game
-GA  = ga(type = 'real-valued',fitness = play_a_game,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE)
+GA  = ga(type = 'real-valued',fitness = play_a_game,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = NULL)
 #plot(GA)
 
 
 theta_hat = GA@solution[1,]
 #theta_hat
-
-fps = 1
-w = 800; h = 800
-img = image_graph(width = w, height = h, res = 120)
 
 win = c()
 for(i in 1:100)
@@ -212,15 +207,18 @@ for(i in 1:100)
 
   #objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objects,rad,'black')
   res_final = play(xt_try,delt,objects,rad,theta_hat,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
-  
   trajs = na.omit(res_final$trajectories)
-  lines(trajs[, 2,]~trajs[, 1, ])
+  
+  if (i == 1 || i == 50 || i == 100)
+  {
+      plot_game(xt_try,objects,rad,'black')
+      lines(trajs[, 2,]~trajs[, 1, ])
+  }
+  
   win[i] = (res_final$status==1)
 }
-dev.off()
 
 propWins = data.frame("Proportion of successful navigations" = mean(win))
 kable(propWins)
@@ -230,24 +228,26 @@ kable(propWins)
 
 ```{r Q1bii}
 
-img2 = image_graph(width = w, height = h, res = 120)
 winNewObjs = c()
-
 objectsNew = draw_objects(J)
 for(i in 1:100)
 {
   
   #objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objectsNew,rad,'black')
   res_final = play(xt_try,delt,objectsNew,rad,theta_hat,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
-  lines(trajs[, 2,]~trajs[, 1, ])
+  
+  if (i == 1 || i == 50 || i == 100)
+  {
+      plot_game(xt_try,objectsNew,rad,'black')
+      lines(trajs[, 2,]~trajs[, 1, ])
+  }
+
   winNewObjs[i] = (res_final$status==1)
 }
-dev.off()
 
 propNewWins = data.frame("Proportion of successful navigations" = mean(winNewObjs))
 kable(propNewWins)
@@ -260,41 +260,6 @@ Can see that when measuring performance against the same trees, the model perfor
 
 ### i
 ```{r Q1ci}
-### c
-
-# game_statusAdj=function(xtAug,objects, rad)
-# {
-#   print(dim(xtAug))
-#   xt = xtAug[, 1:2]
-#   sk    = rep(0,dim(xt)[1])
-#   min_dists = rep(0,dim(xt)[1])
-#   J         = dim(objects)[1]
-#   ones      = matrix(1,J,1)
-#   for(i in 1:dim(xt)[1])
-#   {
-#     min_dists[i] = min(sqrt(rowSums((objects-ones%*%xt[i,])^2)))
-#     
-#     outRad = ((xt[i, 1])^2) + ((xt[i, 2])^2 )
-#     
-#     if (min_dists[i] < rad)
-#     {
-#       sk[i] = -1
-#     }
-#     
-#     else if ((outRad >= 1))
-#     {
-#       sk[i] = 1    
-#     }
-#     else 
-#     {
-#       sk[i] = 0
-#     }
-#   }
-#   
-#   #sk = 1*(xt[,2]>1)-1*((xt[,1]< -1)|(xt[,1]> +1)|(xt[,2]< -1)|(min_dists<rad))
-#   ret = list(status = sk, minDist = min_dists)
-#   return(ret)
-# }
 
 playAdj = function(x0,delt,objects,rad,theta,plt = FALSE,trace = FALSE)
 {
@@ -365,50 +330,59 @@ npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
 theta_rand = runif(npars,-1,1)
 
 objAdj = play_a_game_adj
-GA_adj  = ga(type = 'real-valued',fitness = play_a_game_adj,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 100,keepBest = TRUE)
-plot(GA_adj)
+GA_adj  = ga(type = 'real-valued',fitness = play_a_game_adj,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = NULL)
+# plot(GA_adj)
 
 
 theta_hat_adj = GA_adj@solution[1,]
 # theta_hat_adj
-img3 = image_graph(width = w, height = h, res = 120)
+
 win_adj = c()
 for(i in 1:100)
 {
   
   #objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objects,rad,'black')
   res_final = playAdj(xt_try,delt,objects,rad,theta_hat_adj,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
-  lines(trajs[, 2,]~trajs[, 1, ])
+  
+  if (i == 1 || i == 50 || i == 100)
+  {
+      plot_game(xt_try,objects,rad,'black')
+      lines(trajs[, 2,]~trajs[, 1, ])
+  }
+  
   win_adj[i] = (res_final$status==1)
 }
-dev.off()
 
 
-propWinsAdj = data.frame("Proportion of successful navigations" = mean(win_adj)*100)
+propWinsAdj = data.frame("Proportion of successful navigations" = mean(win_adj))
 kable(propWinsAdj)
-img4 = image_graph(width = w, height = h, res = 120)
 winNewObjs_adj = c()
 
 objectsNew = draw_objects(J)
 for(i in 1:100)
 {
   xt_try    = draw_starts()
-  plot_game(xt_try,objectsNew,rad,'black')
+
   res_final = playAdj(xt_try,delt,objectsNew,rad,theta_hat_adj,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
-  lines(trajs[, 2,]~trajs[, 1, ])
+  
+  if (i == 1 || i == 50 || i == 100)
+  {
+      plot_game(xt_try,objectsNew,rad,'black')
+      lines(trajs[, 2,]~trajs[, 1, ])
+  }
+  
+
   winNewObjs_adj[i] = (res_final$status==1)
 }
-dev.off()
 
-mean(winNewObjs_adj)
+#mean(winNewObjs_adj)
 propNewWinsAdj = data.frame("Proportion of successful navigations" = mean(winNewObjs_adj))
 kable(propNewWinsAdj)
 ```
@@ -428,49 +402,57 @@ play_a_game_adj_newObs = function(theta)
 
 
 objAdj = play_a_game_adj_newObs
-GA_adj_newObs  = ga(type = 'real-valued',fitness = play_a_game_adj_newObs,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 100,keepBest = TRUE)
-plot(GA_adj_newObs)
+GA_adj_newObs  = ga(type = 'real-valued',fitness = play_a_game_adj_newObs,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = NULL)
+# plot(GA_adj_newObs)
 
 
 theta_hat_adj_newObs = GA_adj_newObs@solution[1,]
 # theta_hat_adj_newObs
-img5 = image_graph(width = w, height = h, res = 120)
+
 win_adj_newObs = c()
 for(i in 1:100)
 {
   
   #objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objects,rad,'black')
   res_final = playAdj(xt_try,delt,objects,rad,theta_hat_adj_newObs,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
-  lines(trajs[, 2,]~trajs[, 1, ])
+  
+  if (i == 1 || i == 50 || i == 100)
+  {
+      plot_game(xt_try,objects,rad,'black')
+      lines(trajs[, 2,]~trajs[, 1, ])
+  }
+  
   win_adj_newObs[i] = (res_final$status==1)
 }
-dev.off()
 
-mean(win_adj_newObs)
-img6 = image_graph(width = w, height = h, res = 120)
+
+
+prop_win_adj_newObs = data.frame("Proportion of successful navigations" = mean(win_adj_newObs))
+kable(prop_win_adj_newObs)
 winNewObjs_adj_genNewObs = c()
+
 for(i in 1:100)
 {
   
   objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objects,rad,'black')
   res_final = playAdj(xt_try,delt,objects,rad,theta_hat_adj_newObs,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
-  lines(trajs[, 2,]~trajs[, 1, ])
+  if (i == 1 || i == 50 || i == 100)
+  {
+      plot_game(xt_try,objects,rad,'black')
+      lines(trajs[, 2,]~trajs[, 1, ])
+  }
   winNewObjs_adj_genNewObs[i] = (res_final$status==1)
 }
-dev.off()
-
-mean(winNewObjs_adj_genNewObs)
-
+prop_winNewObjs_adj_genNewObs = data.frame("Proportion of successful navigations" = mean(winNewObjs_adj_genNewObs))
+kable(prop_winNewObjs_adj_genNewObs)
 ```
 
 
@@ -664,9 +646,9 @@ colnames(df90) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete")
 colnames(df70) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete")
 
 boxplot(df90[, 2:4], main = "Box plot of MCTS, alpha = 0.9")
-points(c(CombinedFull[2], CombinedFull[3], CombinedFull[4]), pch = "*", col = "red", cex = 3)
+points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 boxplot(df70[, 2:4], main = "Box plot of MCTS, alpha = 0.7")
-points(c(CombinedFull[2], CombinedFull[3], CombinedFull[4]), pch = "*", col = "red", cex = 3)
+points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 
 mcts_minBranch = function(m, k, alpha, currMoves, minBranch)
 {
@@ -761,9 +743,9 @@ colnames(df90_Branch_new) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete"
 colnames(df70_Branch_new) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete")
 
 boxplot(df90_Branch_new[, 2:4], ylim = c(0, 1), main = "Box plot of MCTS, alpha = 0.9 with minimum of 3 steps")
-points(c(CombinedFull[2], CombinedFull[3], CombinedFull[4]), pch = "*", col = "red", cex = 3)
+points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 boxplot(df70_Branch_new[, 2:4], ylim = c(0, 1), main = "Box plot of MCTS, alpha = 0.7 with minimum of 3 steps")
-points(c(CombinedFull[2], CombinedFull[3], CombinedFull[4]), pch = "*", col = "red", cex = 3)
+points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 
 ```
 
@@ -852,33 +834,6 @@ my_svm = function(y, x, kern, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg = 0
   pad.a     = round(a,3)
   wh        = which.max(a)
   
-  # T1 = rep(0,N)
-  # for(i in 1:N)
-  # {
-  #   if (kern == "none")
-  #   {
-  #     T1[i] = sum(a*y*(x[i,]%*%t(x)))
-  #     intercept = 1/y[wh]-sum(a*y*(t(x[i,])%*%x))
-  #   }
-  #   else if (kern == "poly")
-  #   {
-  #     KK = polKern(x[i,], t(x), gm, cf, dg)
-  #     
-  #     print(KK)
-  #     T1[i] = sum(a*y*KK)
-  #     KKNew = polKern(x[wh,], t(x), gm, cf, dg)
-  #     intercept = 1/y[wh]-sum(a*y*KKNew)
-  #   }
-  #   else if (kern == "radial")
-  #   {
-  #     KK = radialKern(x[i,], t(x), gm)
-  #     T1[i] = sum(a*y*KK)
-  #     KKNew = radialKern(x[wh,], t(x), gm)
-  #     intercept = 1/y[wh]-sum(a*y*KKNew)
-  #   }
-  # }
-  
-  
   if (kern == "none")
   {
     ww = t(a*y)%*%X
@@ -958,7 +913,7 @@ text(PLADat$X2[wh.text]~PLADat$X1[wh.text],labels = paste0('n = ',wh.text))
 
 library('e1071')
 
-model  = svm(Ynew~(X1 + X2), data = PLADat, scale = FALSE,kernel = 'polynomial',degree =dg,gamma = gm,coef0 = cf,cost = 10000, type = "C")
+model  = svm(Y~(X1 + X2), data = PLADat, scale = FALSE,kernel = 'polynomial',degree =dg,gamma = gm,coef0 = cf,cost = 10000, type = "C")
 
 # Our solution
 plot(X2~X1, data = PLADat)

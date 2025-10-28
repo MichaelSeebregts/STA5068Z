@@ -60,7 +60,7 @@ legenTarget = function(targets, Qf, x, plot = TRUE, sigma = 0, beta = c())
   
   if(plot == TRUE)
   {
-    plot(x, legendre(Qf, x), type = "l")
+    plot(1, 1, type = "n", ylim = c(-2, 2), xlim = c(-1, 1), ylab = "Y", xlab = "X", main = paste0("Legendre target of order ", Qf))
   }
   
   for(j in 1:targets)
@@ -96,7 +96,7 @@ legenTarget = function(targets, Qf, x, plot = TRUE, sigma = 0, beta = c())
 
 polyTarget = function(targets, Qf, x)
 {
-  plot(x, legendre(Qf, x), type = "l", ylab = "Y", xlab = "X", main = paste0("Polynomial target of order ", Qf), ylim = c(-2, 2))
+  plot(1, 1, type = "n", ylab = "Y", xlab = "X", main = paste0("Polynomial target of order ", Qf), ylim = c(-2, 2), xlim = c(-1, 1))
   
   for(j in 1:targets)
   {
@@ -225,11 +225,11 @@ for (i in 1:length(Nseq2))
     dat = data.frame(y = yTemp, x = xTemp)
     H2 = lm(y ~ poly(x, 2), data = dat)
     H10 = lm(y ~ poly(x, 10), data = dat)
-    xOut = runif(500, -1, 1)
+    #xOut = runif(500, -1, 1)
     y2Pred = predict(H2, newdata = data.frame(x = xSeq))
     y10Pred = predict(H10, newdata = data.frame(x = xSeq))
     
-    yOut = legenTarget(1, Order[j], xOut, FALSE, 0, betaTemp)
+    yOut = legenTarget(1, Order[j], xSeq, FALSE, 0, betaTemp)
     
     H2Error = mean((target - y2Pred)^2)
     H10Error = mean((target - y10Pred)^2)
@@ -478,6 +478,7 @@ legend("topleft", legend = c("H1 Test Error", "H2 Test Error", "H1 Var + Bias^2"
 
 
 ```
+
 ### 3e
 
 We can see that bias, variance and expected out of sample error are always greater under H1 than H2. The distance between the bias, variance and test error appear to have constant distances between H1 and H2 for varying levels of noise. 
@@ -685,7 +686,7 @@ legend("bottomright", legend = c("alpha", "beta", "rho"), col = c("cyan", "orang
 
 
 ```
-New points can be classified by measuring their X1 and X2 variables. If the X1 and X2 is in cyan region, they can be labelled as $\alpha$ particles, if they are in the pink orange region, they can be labelled as $\beta$ particles and if they are in the pink region, they can be labelled as $\rho$ particles. 
+New points can be classified by measuring their X1 and X2 variables. If the X1 and X2 puts the point in the cyan region, they can be labelled as $\alpha$ particles, if they are in the pink orange region, they can be labelled as $\beta$ particles and if they are in the pink region, they can be labelled as $\rho$ particles. 
 
 
 

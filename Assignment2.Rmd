@@ -52,7 +52,7 @@ game_status=function(xt,objects, rad)
 
 ### i
 
-```{r Q1bi}
+```{r Q1bi processing, echo = FALSE}
 options(scipen = 999)
 
 draw_objects = function(J)
@@ -70,13 +70,6 @@ draw_starts = function(N = 1)
   xt       =  matrix(cbind(r_x*cos(pi_x),r_x*sin(pi_x)),nrow = N,byrow = TRUE)
 }
 
-set.seed(2024)
-J       =  50  
-objects = draw_objects(J)
-xt      = draw_starts()
-delt    = 0.025             # How big are the steps you can take?
-rad     = 0.05              # How close to an object before you crash?
-
 # Just a function to plot the game:
 plot_game = function(xt,objects,rad,cols = 1)
 {
@@ -90,7 +83,6 @@ plot_game = function(xt,objects,rad,cols = 1)
   lines(c(0.25*y_edge)~c(0.25*x_edge),lty = 2)
 }
 
-plot_game(xt,objects,rad,'black')
 
 play = function(x0,delt,objects,rad,theta,plt = FALSE,trace = FALSE)
 {
@@ -162,12 +154,12 @@ model = function(X,theta,nodes)
   # Return a list of relevant objects:
   return(list(a3 = t(a3)))
 }
-
+set.seed(2024)
 p     = 2
 q     = 2
 nodes = 3
 npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
-npars
+#npars
 theta_rand = runif(npars,-1,1)
 
 control = function(xt,pars)
@@ -176,7 +168,18 @@ control = function(xt,pars)
   res_model = model(xt,pars,rep(nodes,2))
   return(res_model$a3)
 }
-control(xt,theta_rand)
+#control(xt,theta_rand)
+```
+
+```{r Q1bi}
+
+J       =  50  
+objects = draw_objects(J)
+xt      = draw_starts()
+delt    = 0.025             # How big are the steps you can take?
+rad     = 0.05              # How close to an object before you crash?
+
+plot_game(xt,objects,rad,'black')
 
 play_a_game = function(theta)
 {
@@ -214,6 +217,8 @@ for(i in 1:100)
   lines(trajs[, 2,]~trajs[, 1, ])
   win[i] = (res_final$status==1)
 }
+dev.off()
+
 propWins = data.frame("Proportion of successful navigations" = mean(win)*100)
 kable(propWins)
 ```
@@ -224,19 +229,23 @@ kable(propWins)
 
 img2 = image_graph(width = w, height = h, res = 120)
 winNewObjs = c()
+
+objectsNew = draw_objects(J)
 for(i in 1:100)
 {
   
-  objects = draw_objects(J)
+  #objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objects,rad,'black')
-  res_final = play(xt_try,delt,objects,rad,theta_hat,plt = FALSE,trace = TRUE)
+  plot_game(xt_try,objectsNew,rad,'black')
+  res_final = play(xt_try,delt,objectsNew,rad,theta_hat,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
   lines(trajs[, 2,]~trajs[, 1, ])
   winNewObjs[i] = (res_final$status==1)
 }
+dev.off()
+
 propNewWins = data.frame("Proportion of successful navigations" = mean(winNewObjs))
 kable(propNewWins)
 ```
@@ -259,7 +268,7 @@ playAdj = function(x0,delt,objects,rad,theta,plt = FALSE,trace = FALSE)
   status      = res_status$status
   minDists = res_status$minDist
   
-  inverseDist = 1/(minDists-rad)
+  inverseDist = 1/pmax((minDists - rad), 1e-6)
   # Check which games are still active:
   terminal      = (status != 0)
   if(trace)
@@ -305,12 +314,12 @@ play_a_game_adj = function(theta)
   return(score)
 }
 
-p     = 3
-q     = 2
-nodes = 3
-npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
-npars
-theta_rand = runif(npars,-1,1)
+# p     = 3
+# q     = 2
+# nodes = 3
+# npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
+# npars
+# theta_rand = runif(npars,-1,1)
 
 objAdj = play_a_game_adj
 GA_adj  = ga(type = 'real-valued',fitness = play_a_game_adj,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 100,keepBest = TRUE)
@@ -318,7 +327,7 @@ plot(GA_adj)
 
 
 theta_hat_adj = GA_adj@solution[1,]
-theta_hat_adj
+# theta_hat_adj
 img3 = image_graph(width = w, height = h, res = 120)
 win_adj = c()
 for(i in 1:100)
@@ -334,24 +343,28 @@ for(i in 1:100)
   lines(trajs[, 2,]~trajs[, 1, ])
   win_adj[i] = (res_final$status==1)
 }
+dev.off()
+
 
 propWinsAdj = data.frame("Proportion of successful navigations" = mean(win_adj)*100)
 kable(propWinsAdj)
 img4 = image_graph(width = w, height = h, res = 120)
 winNewObjs_adj = c()
+
+objectsNew = draw_objects(J)
 for(i in 1:100)
 {
-  
-  objects = draw_objects(J)
   xt_try    = draw_starts()
-  plot_game(xt_try,objects,rad,'black')
-  res_final = playAdj(xt_try,delt,objects,rad,theta_hat_adj,plt = FALSE,trace = TRUE)
+  plot_game(xt_try,objectsNew,rad,'black')
+  res_final = playAdj(xt_try,delt,objectsNew,rad,theta_hat_adj,plt = FALSE,trace = TRUE)
   #print(typeof(res_final$trajectories))
   
   trajs = na.omit(res_final$trajectories)
   lines(trajs[, 2,]~trajs[, 1, ])
   winNewObjs_adj[i] = (res_final$status==1)
 }
+dev.off()
+
 mean(winNewObjs_adj)
 propNewWinsAdj = data.frame("Proportion of successful navigations" = mean(winNewObjs_adj)*100)
 kable(propNewWinsAdj)
@@ -377,7 +390,7 @@ plot(GA_adj_newObs)
 
 
 theta_hat_adj_newObs = GA_adj_newObs@solution[1,]
-theta_hat_adj_newObs
+# theta_hat_adj_newObs
 img5 = image_graph(width = w, height = h, res = 120)
 win_adj_newObs = c()
 for(i in 1:100)
@@ -393,6 +406,8 @@ for(i in 1:100)
   lines(trajs[, 2,]~trajs[, 1, ])
   win_adj_newObs[i] = (res_final$status==1)
 }
+dev.off()
+
 mean(win_adj_newObs)
 img6 = image_graph(width = w, height = h, res = 120)
 winNewObjs_adj_genNewObs = c()
@@ -409,6 +424,8 @@ for(i in 1:100)
   lines(trajs[, 2,]~trajs[, 1, ])
   winNewObjs_adj_genNewObs[i] = (res_final$status==1)
 }
+dev.off()
+
 mean(winNewObjs_adj_genNewObs)
 
 ```
@@ -430,7 +447,7 @@ S[c(1:3)*3-0,6] = 1
 # Diag Sums
 S[c(1,5,9),7] = 1
 S[c(3,5,7),8] = 1
-S
+#S
 
 
 rho = function(m,S)
@@ -497,7 +514,7 @@ Draws8 = sum(res8== 0)
 Owins8 = sum(res8==+1)
 Unfinished8 = sum(res8==+2)
 #Games8 = c(n_g8,Xwins8,Draws8,Owins8, Unfinished8)
-games8 = data.frame("Number of moves" = 8, "Number of games" = n_g5, "X wins" = Xwins5, "O wins" = Owins5, "Draws" = Draws5)
+games8 = data.frame("Number of moves" = 8, "Number of games" = n_g8, "X wins" = Xwins8, "O wins" = Owins8, "Draws" = Draws8)
 
 res9 = game_tree(m,1, 0, 9)
 n_g9  = 	length(res9)
@@ -505,7 +522,8 @@ Xwins9 = sum(res9==-1)
 Draws9 = sum(res9== 0)
 Owins9 = sum(res9==+1)
 Unfinished9 = sum(res9==+2)
-CombinedFull = c(n_g9,Xwins9/n_g9,Draws9/n_g9,Owins9/n_g9, Unfinished9)
+CombinedFull = c(n_g9,Xwins9,Draws9,Owins9, Unfinished9)
+CombinedFullWinProb = c(Xwins9/n_g9,Draws9/n_g9,Owins9/n_g9)
 
 datQ2A = rbind(games5, games8)
 kable(datQ2A)
@@ -558,6 +576,12 @@ DrawsMCTS = sum(resMCTS== 0)
 OwinsMCTS = sum(resMCTS==+1)
 UnfinishedMCTS = sum(resMCTS==+2)
 MCTS = c(n_gMCTS,XwinsMCTS,DrawsMCTS,OwinsMCTS, UnfinishedMCTS)
+MCTSWinProb = c(XwinsMCTS/n_gMCTS,DrawsMCTS/n_gMCTS,OwinsMCTS/n_gMCTS)
+
+kable(MCTS)
+kable(CombinedFull)
+kable(MCTSWinProb)
+kable(CombinedFullWinProb)
 
 ```
 
@@ -701,4 +725,204 @@ points(c(CombinedFull[2], CombinedFull[3], CombinedFull[4]), pch = "*", col = "r
 ```
 
 # Q3
+
+### Q3a
+
+```{r Q3a}
+
+library(quadprog)
+
+polKern = function(x1, x2, gm, cf, dg)
+{
+  return((cf+gm*t(x1)%*%x2)^dg)
+}
+
+radialKern = function(x1, x2, gm)
+{
+  return(exp(-gm*(sum((x1 - x2)^2))))
+}
+
+my_svm = function(y, x, kern, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg = 0, plt = FALSE)
+{
+  N = dim(x)[1]
+  DD = matrix(0,N,N)
+  
+  if(kern == "none")
+  {
+    for(i in 1:N)
+    {
+      for(j in 1:N)
+      {
+        DD[i,j]  = y[i]*y[j]*(t(x[i,])%*%x[j,])
+      }
+    }
+  }
+  else if (kern == "poly")
+  {
+    
+    for(i in 1:N)
+    {
+      for(j in 1:N)
+      {
+        KK = polKern(x[i,], x[j,], gm, cf, dg)
+        DD[i,j]  = y[i]*y[j]*KK
+      }
+    }
+  }
+  else if (kern == "radial")
+  {
+    for(i in 1:N)
+    {
+      for(j in 1:N)
+      {
+        KK = radialKern(x[i,], x[j,], gm)
+        DD[i,j]  = y[i]*y[j]*KK
+      }
+    }
+  }
+  
+  eps = 5e-6
+  DD  = DD+eps*diag(N)
+  Amat = cbind(y,diag(N)) # y will be on first row of t(Amat)
+  bvec = matrix(0,N+1,1)
+  d    = matrix(1,N,1)
+  
+  if (softMarg == TRUE)
+  {
+    negativeC = (-1)*cost
+    Amat = cbind(Amat, -diag(N))
+    Cvec = rep(negativeC, N)
+    vec0 = rep(0, N+1)
+    bvec = matrix(c(vec0, Cvec), ncol = 1, nrow = (2*N + 1))
+  }
+  print(dim(Amat))
+  print(dim(bvec))
+  
+  res = solve.QP(Dmat = DD,dvec = d,Amat = Amat,bvec = bvec,meq = 1,factorized = FALSE)
+  a   = res$solution
+  
+  if (plt == TRUE)
+  {
+    plot(a,type= 'h', main = expression(alpha[i]),xlab = expression(i), lwd = 2)
+  }
+  
+  pad.a     = round(a,3)
+  wh        = which.max(a)
+  
+  # T1 = rep(0,N)
+  # for(i in 1:N)
+  # {
+  #   if (kern == "none")
+  #   {
+  #     T1[i] = sum(a*y*(x[i,]%*%t(x)))
+  #     intercept = 1/y[wh]-sum(a*y*(t(x[i,])%*%x))
+  #   }
+  #   else if (kern == "poly")
+  #   {
+  #     KK = polKern(x[i,], t(x), gm, cf, dg)
+  #     
+  #     print(KK)
+  #     T1[i] = sum(a*y*KK)
+  #     KKNew = polKern(x[wh,], t(x), gm, cf, dg)
+  #     intercept = 1/y[wh]-sum(a*y*KKNew)
+  #   }
+  #   else if (kern == "radial")
+  #   {
+  #     KK = radialKern(x[i,], t(x), gm)
+  #     T1[i] = sum(a*y*KK)
+  #     KKNew = radialKern(x[wh,], t(x), gm)
+  #     intercept = 1/y[wh]-sum(a*y*KKNew)
+  #   }
+  # }
+  
+  
+  if (kern == "none")
+  {
+    ww = t(a*y)%*%X
+    intercept = 1/y[wh] - X[wh, ]%*%t(ww)
+    
+    yhat = sign(X%*%t(ww) + intercept[1])
+    
+  }
+  else if (kern == "poly")
+  {
+    
+    T1 = rep(0,N)
+    for(i in 1:N)
+    {
+      KK = polKern(x[i, ], t(X), gm, cf, dg)
+      T1[i] = sum(a*y*(KK))
+    }
+    print(KK)
+    
+    KKNew = polKern(x[wh,], t(x), gm, cf, dg)
+    intercept = 1/y[wh]-sum(a*y*KKNew)
+    
+    yhat      = sign(T1+intercept[1])
+  }
+  else if (kern == "radial")
+  {
+    T1 = rep(0,N)
+    for(i in 1:N)
+    {
+      T1[i] = sum(a*y*(x[i,]%*%t(x)))
+    }
+    
+    KKNew = radialKern(x[wh,], t(x), gm)
+    intercept = 1/y[wh]-sum(a*y*KKNew)
+    
+    yhat      = sign(T1+intercept[1])
+  }
+  
+  res = list("yhat" = yhat, "padA" = pad.a, "a" = a, "intercept" = intercept)
+  return(res)
+  
+}
+
+PLADat = read.table("PLA Dynamics.txt")
+
+plot(X2 ~ X1, col = (Y + 3), data = PLADat)
+
+# Create data matrix:
+X  = cbind(PLADat$X1,PLADat$X2)
+Y = PLADat$Y
+
+gm = 2
+cf = 1
+dg = 2
+
+mySVM = my_svm(Y, X, "radial", 10000, TRUE, gm, cf, dg, plt = TRUE)
+
+yhat = mySVM$yhat
+padA = mySVM$padA
+
+
+par(mfrow = c(2,2))
+plot(X2~X1,pch = c(1,16)[(Y+1)/2+1], data = PLADat)
+plot(PLADat$X2~PLADat$X1, pch = 16, col = c('grey','blue')[(yhat+1)/2+1])
+
+wh.text = which(padA!=0)
+points(PLADat$X2~PLADat$X1, pch = 1, col = c(NA,'red')[(padA>0)+1],cex=2)
+text(PLADat$X2[wh.text]~PLADat$X1[wh.text],labels = paste0('n = ',wh.text))
+
+```
+
+### Q3b
+
+```{r Q3b}
+
+library('e1071')
+
+model  = svm(Y~(X1 + X2), data = PLADat, scale = FALSE,kernel = 'polynomial',degree =dg,gamma = gm,coef0 = cf,cost = 10000)
+
+# Our solution
+plot(X2~X1,type = "n", data = PLADat)
+
+points(model$SV[,2]~model$SV[,1],pch = '+', col = 'blue',cex = 2)
+ N = dim(X)[1]
+plot(model$coefs~model$index,type = 'h',xlim = c(0,N))
+
+```
+
+
 

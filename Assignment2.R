@@ -649,6 +649,7 @@ points(c(CombinedFull[2], CombinedFull[3], CombinedFull[4]), pch = "*", col = "r
 
 #### Q3 
 
+
 library(quadprog)
 
 polKern = function(x1, x2, gm, cf, dg)
@@ -661,12 +662,12 @@ radialKern = function(x1, x2, gm)
   return(exp(-gm*(sum((x1 - x2)^2))))
 }
 
-my_svm = function(y, x, kernel, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg = 0)
+my_svm = function(y, x, kern, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg = 0, plt = FALSE)
 {
   N = dim(x)[1]
   DD = matrix(0,N,N)
   
-  if(kernel == "none")
+  if(kern == "none")
   {
     for(i in 1:N)
     {
@@ -676,7 +677,7 @@ my_svm = function(y, x, kernel, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg =
       }
     }
   }
-  else if (kernel == "poly")
+  else if (kern == "poly")
   {
     
     for(i in 1:N)
@@ -688,7 +689,7 @@ my_svm = function(y, x, kernel, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg =
       }
     }
   }
-  else if (kernel == "radial")
+  else if (kern == "radial")
   {
     for(i in 1:N)
     {
@@ -708,11 +709,16 @@ my_svm = function(y, x, kernel, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg =
   
   if (softMarg == TRUE)
   {
+    negativeC = (-1)*cost
     Amat = cbind(Amat, -diag(N))
-    bvec = rbind(bvec, rep(-C, length.out = N))
+    Cvec = rep(negativeC, N)
+    vec0 = rep(0, N+1)
+    bvec = matrix(c(vec0, Cvec), ncol = 1, nrow = (2*N + 1))
   }
+  print(dim(Amat))
+  print(dim(bvec))
   
-  res = solve.QP(DD,d,Amat,bvec,meq = 1,factorized = FALSE)
+  res = solve.QP(Dmat = DD,dvec = d,Amat = Amat,bvec = bvec,meq = 1,factorized = FALSE)
   a   = res$solution
   
   if (plt == TRUE)
@@ -723,17 +729,73 @@ my_svm = function(y, x, kernel, cost = 0, softMarg = FALSE, gm = 0, cf = 0, dg =
   pad.a     = round(a,3)
   wh        = which.max(a)
   
-  T1 = rep(0,N)
-  for(i in 1:N)
+  # T1 = rep(0,N)
+  # for(i in 1:N)
+  # {
+  #   if (kern == "none")
+  #   {
+  #     T1[i] = sum(a*y*(x[i,]%*%t(x)))
+  #     intercept = 1/y[wh]-sum(a*y*(t(x[i,])%*%x))
+  #   }
+  #   else if (kern == "poly")
+  #   {
+  #     KK = polKern(x[i,], t(x), gm, cf, dg)
+  #     
+  #     print(KK)
+  #     T1[i] = sum(a*y*KK)
+  #     KKNew = polKern(x[wh,], t(x), gm, cf, dg)
+  #     intercept = 1/y[wh]-sum(a*y*KKNew)
+  #   }
+  #   else if (kern == "radial")
+  #   {
+  #     KK = radialKern(x[i,], t(x), gm)
+  #     T1[i] = sum(a*y*KK)
+  #     KKNew = radialKern(x[wh,], t(x), gm)
+  #     intercept = 1/y[wh]-sum(a*y*KKNew)
+  #   }
+  # }
+  
+  
+  if (kern == "none")
   {
-    T1[i] = sum(a*y*KK(x[i,],t(x)))
+    ww = t(a*y)%*%X
+    intercept = 1/y[wh] - X[wh, ]%*%t(ww)
+    
+    yhat = sign(X%*%t(ww) + intercept[1])
+    
+  }
+  else if (kern == "poly")
+  {
+    
+    T1 = rep(0,N)
+    for(i in 1:N)
+    {
+      KK = polKern(x[i, ], t(X), gm, cf, dg)
+      T1[i] = sum(a*y*(KK))
+    }
+    print(KK)
+    
+    KKNew = polKern(x[wh,], t(x), gm, cf, dg)
+    intercept = 1/y[wh]-sum(a*y*KKNew)
+    
+    yhat      = sign(T1+intercept[1])
+  }
+  else if (kern == "radial")
+  {
+    T1 = rep(0,N)
+    for(i in 1:N)
+    {
+      T1[i] = sum(a*y*(x[i,]%*%t(x)))
+    }
+    
+    KKNew = radialKern(x[wh,], t(x), gm)
+    intercept = 1/y[wh]-sum(a*y*KKNew)
+    
+    yhat      = sign(T1+intercept[1])
   }
   
-  intercept = 1/y[wh]-sum(a*y*KK(x[wh,],t(x)))
-  yhat      = sign(T1+intercept[1])
-  
-  res = list(yHat = yhat, a = a, intercept = intercept, )
-  return(list("yhat" = yhat), "padA" = pad.a, "a" = a, "intercept" = intercept)
+  res = list("yhat" = yhat, "padA" = pad.a, "a" = a, "intercept" = intercept)
+  return(res)
   
 }
 
@@ -745,32 +807,38 @@ plot(X2 ~ X1, col = (Y + 3), data = PLADat)
 X  = cbind(PLADat$X1,PLADat$X2)
 Y = PLADat$Y
 
-gm = 1
+gm = 2
 cf = 1
 dg = 2
 
-mySVM = my_svm(Y, X, "poly", 10000, TRUE, gm, cf, dg)
+mySVM = my_svm(Y, X, "radial", 10000, TRUE, gm, cf, dg, plt = TRUE)
+
+yhat = mySVM$yhat
+padA = mySVM$padA
+
 
 par(mfrow = c(2,2))
-plot(x2~x1,pch = c(1,16)[(y+1)/2+1])
-plot(x2~x1, pch = 16, col = c('grey','blue')[(yhat+1)/2+1])
+plot(X2~X1,pch = c(1,16)[(Y+1)/2+1], data = PLADat)
+plot(PLADat$X2~PLADat$X1, pch = 16, col = c('grey','blue')[(yhat+1)/2+1])
 
-wh.text = which(pad.a!=0)
-points(x2~x1, pch = 1, col = c(NA,'red')[(pad.a>0)+1],cex=2)
-text(x2[wh.text]~x1[wh.text],labels = paste0('n = ',wh.text))
+wh.text = which(padA!=0)
+points(PLADat$X2~PLADat$X1, pch = 1, col = c(NA,'red')[(padA>0)+1],cex=2)
+text(PLADat$X2[wh.text]~PLADat$X1[wh.text],labels = paste0('n = ',wh.text))
 
 
 
 library('e1071')
-dat    = data.frame(y = as.factor(y), x2=x2, x1 =x1)
-model  = svm(y~., data = dat, scale = FALSE,kernel = 'polynomial',degree =2,gamma = gm,coef0 = cf,cost = 10000)
+
+model  = svm(Y~(X1 + X2), data = PLADat, scale = FALSE,kernel = 'polynomial',degree =dg,gamma = gm,coef0 = cf,cost = 10000)
 
 # Our solution
-plot(x2~x1,pch = c(1,16)[(y+1)/2+1])
-points(x2~x1, pch = 1,col = c(NA,'red')[(pad.a>0)+1],cex=2)
+plot(X2~X1,pch = c(1,16)[(Y+1)/2+1], data = PLADat)
+plot(PLADat$X2~PLADat$X1, pch = 16, col = c('grey','blue')[(yhat+1)/2+1])
 
 # Package solution
-points(model$SV[,1]~model$SV[,2],pch = '+', col = 'blue',cex = 2)
+plot(1, 1, type = "n", xlim = c(-25, 25), ylim = c(-17, 17))
+points(model$SV[,2]~model$SV[,1],pch = '+', col = 'blue',cex = 2)
+ N = dim(X)[1]
 plot(model$coefs~model$index,type = 'h',xlim = c(0,N))
 
-####
+ ####

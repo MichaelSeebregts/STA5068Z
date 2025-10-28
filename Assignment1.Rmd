@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(kableExtra)
+options(scipen = 999)
 ```
 \newpage
 
@@ -326,6 +327,12 @@ dgp2 = DGP(5, 0)
 dgp3 = DGP(5, 0)
 dgp4 = DGP(5, 0)
 dgp5 = DGP(5, 0)
+points(dgp1$x, dgp1$y, col = "red", type = "p", lwd = 5)
+points(dgp2$x, dgp2$y, col = "blue", type = "p", lwd = 5)
+points(dgp3$x, dgp3$y, col = "green", type = "p", lwd = 5)
+points(dgp4$x, dgp4$y, col = "pink", type = "p", lwd = 5)
+points(dgp5$x, dgp5$y, col = "magenta", type = "p", lwd = 5)
+
 
 plot(xBase, runUnderlying, type = "l", ylab = "Y", xlab = "X", main = "Simulations under H1")
 hyp1(dgp1$x, xBase, dgp1$y, "red", TRUE)
@@ -354,7 +361,7 @@ points(dgp5$x, dgp5$y, col = "magenta", type = "p", lwd = 5)
 
 
 ### 3b
-H2 clearly seems like the better fit, with the sin being able to capture the wave like nature much better, although not able to capture the sharp changes. H2 is able to go through many more points that it is fitted to, while H1 is generally not able to. H2 is also much less volatile than H1 under different simulations. 
+H2 clearly seems like the better fit, with the trig functions being able to capture the wave like nature much better, although not able to capture the sharp changes. H2 is able to go through many more points that it is fitted to, while H1 is generally not able to. H2 is also much less volatile than H1 under different simulations. 
 
 
 ### 3c
@@ -427,7 +434,7 @@ kable(biasVarH2)
 ```
 ### 3d
 
-```{r Q3d, echo = FALSE}
+```{r Q3d}
 
 varyingH1 = data.frame("Bias" = numeric(0), "Var" = numeric(0), "Test Error" = numeric(0), "OOSE" = numeric(0))
 varyingH2 = data.frame("Bias" = numeric(0), "Var" = numeric(0), "Test Error" = numeric(0), "OOSE" = numeric(0))
@@ -593,8 +600,8 @@ res = neural_net(X,Y,theta_rand,m,0)
 set.seed(2022)
 
 M  = 100
-x1 = seq(min(X[1, ]),max(X[1, ]),length = M)
-x2 = seq(min(X[2, ]),max(X[2, ]),length = M)
+x1 = seq(min(X$X1),max(X$X1),length = M)
+x2 = seq(min(X$X2),max(X$X2),length = M)
 xx1 = rep(x1,M) 
 xx2 = rep(x2, each = M)
 

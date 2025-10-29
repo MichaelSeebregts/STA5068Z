@@ -140,14 +140,17 @@ Can see that around -1 and +1, the polynomial targets are much more limited in t
 ### 2a
 
 ```{r Q2a}
+set.seed(2025)
+options(rgl.useNULL = TRUE)
+library(rgl)
 pal  <- colorRampPalette(c("navy","cyan","yellow","red"))(100)
 sc   <- function(z, zmin, zmax) pmax(1, pmin(100, round(1 + 99*(z - zmin)/(zmax - zmin))))
 betaTemp = runif(11, -1, 1)
 xSeq = seq(-1, 1, by = 1/500)
 target = legenTarget(1, 10, xSeq, FALSE, 0, betaTemp)
-plot(target ~ xSeq, type = "l")
+plot(target ~ xSeq, type = "l", ylim = c(-5, 5))
 
-NSeq = c(20:110)
+NSeq = c(70:110)
 sigmaSeq = seq(0.2, 1.1, length.out = length(NSeq))
 
 overFitDF = data.frame()
@@ -161,32 +164,52 @@ for (i in 1:length(NSeq))
   for (j in 1:length(sigmaSeq))
   {
     overFitTemp = 0
-    for (q in 1:10)
+    for (q in 1:1)
     {
         xTemp = runif(NSeq[i], -1, 1)
         yTemp = legenTarget(1, 10, xTemp, FALSE, sigmaSeq[j], betaTemp)
         dat = data.frame(y = yTemp, x = xTemp)
         H2  = lm(y ~ poly(x, 2), data = dat)
         H10 = lm(y ~ poly(x, 10), data = dat)
-        #xOut = runif(500, -1, 1)
+        #xOut = runif(NSeq[i], -1, 1)
         y2Pred = predict(H2, newdata = data.frame(x = xSeq))
         y10Pred = predict(H10, newdata = data.frame(x = xSeq))
         
-        #yOut = legenTarget(1, 10, xOut, FALSE, 0, betaTemp)
+        yOut = legenTarget(1, 10, xSeq, FALSE, 0, betaTemp)
         
-        H2Error = mean((target - y2Pred)^2)
-        H10Error = mean((target - y10Pred)^2)
+        H2Error = mean((yOut - y2Pred)^2)
+        H10Error = mean((yOut - y10Pred)^2)
         overFitTemp = overFitTemp + (H10Error - H2Error)
+        
+        if (j == 26 && i == 7)
+        {
+          print(H10)
+          points(xTemp, yTemp, col = "magenta")
+          lines(xSeq, y10Pred, col = "blue")
+          lines(xSeq, y2Pred, col = "red")
+          print(H2Error)
+          print(H10Error)
+          print(overFitTemp)
+        }
+        
+        #overFitTemp = overFitTemp + mean((yOut - y10Pred)^2 - (yOut - y2Pred)^2)
     }
     
     # H2Error = mean((target - y2Pred)^2)
     # H10Error = mean((target - y10Pred)^2)
     
     # overFitTemp = H10Error - H2Error
-    overFitDF[i, j] = overFitTemp/10
+    overFitDF[i, j] = overFitTemp/1
     #points(NSeq[i], sigmaSeq[j], col = pal[ sc(overFitTemp, zmin, zmax) ])
   }
 }
+
+sum(is.na(overFitDF))
+which(is.na(overFitDF), arr.ind = TRUE)
+
+overFitMat = as.matrix(overFitDF)
+which(overFitMat == max(overFitMat), arr.ind = TRUE)
+
 
 zmin <- min(overFitDF, na.rm = TRUE)
 zmax <- max(overFitDF, na.rm = TRUE)
@@ -200,6 +223,45 @@ for (i in seq_along(NSeq)) {
            pch = 16, cex = 0.6)
   }
 }
+
+
+
+
+
+
+
+#######
+
+Z = as.matrix(overFitDF)    # or overFitDF2
+x = NSeq                    # or Nseq2
+y = sigmaSeq 
+top_vals <- sort(Z, decreasing = TRUE)[1:7]
+
+# Replace them with 0
+#Z[Z %in% top_vals] <- 0
+open3d()
+rgl.clear()
+
+# Optional color mapping
+zmin <- min(Z, na.rm = TRUE)
+zmax <- max(Z, na.rm = TRUE)
+pal  <- colorRampPalette(c("navy","cyan","yellow","red"))(100)
+colMat <- pal[sc(Z, zmin, zmax)]
+
+# Build a surface
+persp3d(
+  x, y, Z,
+  col = colMat,
+  xlab = "N",
+  ylab = "Sigma",
+  zlab = "Overfitting (H10 - H2)",
+  smooth = TRUE,
+  specular = "black",
+  alpha = 0.9
+)
+
+rglwidget()
+
 ```
 ### 2b
 

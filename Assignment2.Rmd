@@ -29,16 +29,13 @@ game_status=function(xt,objects, rad)
   {
     min_dists[i] = min(sqrt(rowSums((objects-ones%*%xt[i,])^2)))
     
-    outRad = ((xt[i, 1])^2) + ((xt[i, 2])^2 )
-    
-    if (min_dists[i] < rad)
-    {
-      sk[i] = -1
-    }
-    
-    else if ((outRad >= 1))
+    if (((xt[i, 1])^2 + (xt[i, 2]^2 ) >= 1))
     {
       sk[i] = 1    
+    }
+    else if (min_dists[i] < rad)
+    {
+      sk[i] = -1
     }
     else 
     {
@@ -50,6 +47,7 @@ game_status=function(xt,objects, rad)
   ret = list(status = sk, minDist = min_dists)
   return(ret)
 }
+
 ```
 
 ### Q1b
@@ -158,12 +156,14 @@ model = function(X,theta,nodes)
   # Return a list of relevant objects:
   return(list(a3 = t(a3)))
 }
-p     = 2
-q     = 2
-nodes = 3
-npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
-#npars
-theta_rand = runif(npars,-1,1)
+
+play_a_game = function(theta)
+{
+  xt    = draw_starts() 
+  res   = play(xt,delt,objects,rad,theta, trace = TRUE)
+  score = mean(res$status==1)
+  return(score)
+}
 
 control = function(xt,pars)
 {
@@ -193,9 +193,16 @@ play_a_game = function(theta)
 }
 # play_a_game(theta_rand)
 
+p     = 2
+q     = 2
+nodes = 3
+npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
+#npars
+theta_rand = runif(npars,-1,1)
+
 obj = play_a_game
-GA  = ga(type = 'real-valued',fitness = play_a_game,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = NULL)
-#plot(GA)
+GA  = ga(type = 'real-valued',fitness = play_a_game,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = TRUE)
+plot(GA)
 
 
 theta_hat = GA@solution[1,]
@@ -253,6 +260,10 @@ propNewWins = data.frame("Proportion of successful navigations" = mean(winNewObj
 kable(propNewWins)
 ```
 
+
+
+### iii
+
 Can see that when measuring performance against the same trees, the model performs relatively well with a proportion of 0.73 passing. However, when using new trees, the model performs much worse with only a proportion of  0.21 passing. This means that the model has not learned how to avoid objects, but simply how to avoid the given set of objects. 
 
 ### Q1c
@@ -274,7 +285,7 @@ playAdj = function(x0,delt,objects,rad,theta,plt = FALSE,trace = FALSE)
   minDists = res_status$minDist
   #print(minDists)
   
-  inverseDist = 1/pmax((minDists - rad), 1e-6)
+  inverseDist = 1/(minDists - rad)
   # Check which games are still active:
   terminal      = (status != 0)
   if(trace)
@@ -386,6 +397,10 @@ for(i in 1:100)
 propNewWinsAdj = data.frame("Proportion of successful navigations" = mean(winNewObjs_adj))
 kable(propNewWinsAdj)
 ```
+### ii
+
+We can see that in sample win probability has increased by , from  to . Similarly, when looking at win probability with new objects, we note an increase as well from , to .
+
 
 ### Q1d
 
@@ -403,7 +418,7 @@ play_a_game_adj_newObs = function(theta)
 
 objAdj = play_a_game_adj_newObs
 GA_adj_newObs  = ga(type = 'real-valued',fitness = play_a_game_adj_newObs,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = NULL)
-# plot(GA_adj_newObs)
+plot(GA_adj_newObs)
 
 
 theta_hat_adj_newObs = GA_adj_newObs@solution[1,]
@@ -455,6 +470,7 @@ prop_winNewObjs_adj_genNewObs = data.frame("Proportion of successful navigations
 kable(prop_winNewObjs_adj_genNewObs)
 ```
 
+The in sample win probability has now decreased, as we are taking new samples each time we play a game. However, we can see that the win probability increases out of sample, after we take new   
 
 # Q2
 
@@ -554,6 +570,8 @@ datQ2A = rbind(games5, games8)
 kable(datQ2A)
 ```
 
+It is assumed that O moves first. From the table, we can see that there is 1440 wins in exactly 5 moves and 23040 draws in exactly 8 moves. Interestingly, it is better to play second if there is a maximum of 8 moves available to be played, as X has greater number of possible wins. It is better to play second, likely because if the O has not won the game in 5 moves, then X is able to win on move 6 or move 8 whereas O is only able to win on move 7.  
+
 ### Q2b
 
 ```{r Q2b}
@@ -610,6 +628,8 @@ kable(CombinedFullWinProb, caption = "Table of proportions using Tree Search")
 
 ```
 
+Can see that there are quite large differences between the true value and the estimated value. X wins are overestimated by 26%, O wins are underestimated by 20% and draws are underestimated by 16%. Considering these are pointe estimates, there is large amounts of volatility and so would make sense. 
+
 ### Q2c
 
 ```{r Q2c}
@@ -649,7 +669,13 @@ boxplot(df90[, 2:4], main = "Box plot of MCTS, alpha = 0.9")
 points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 boxplot(df70[, 2:4], main = "Box plot of MCTS, alpha = 0.7")
 points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
+```
 
+Can see that under alpha = 0.7, the median correctly captures the proportion of X wins, and the number of draws is within the range, and just outside the upper quartile. Under alpha = 0.9, we can see that X wins falls just outside the range, and considered an outlier while draws fall just outside the lower quartile. Under both alphas, we can see we underestimate the number of O wins. This is likely due to most O wins occuring towards the end of the game, which is not evaluated as frequently, as we there is only a 60% chance that a branch is evaluated completely under alpha = 0.9 and 0.17 under alpha = 0.7. Therefore we get O wins being consistently under estimated. 
+
+The distribtion of alpha = 0.7, does appear to slightly perform better in estimating the win probabilities. Draws occur mostly early on in the game, and thus is has a much greater accuracy due to not having to evaluate many long branches. 
+
+```{r Q2cii}
 mcts_minBranch = function(m, k, alpha, currMoves, minBranch)
 {
   g = c()
@@ -748,6 +774,8 @@ boxplot(df70_Branch_new[, 2:4], ylim = c(0, 1), main = "Box plot of MCTS, alpha 
 points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 
 ```
+
+This box plot contains the same MCTS, however there is a minimum number of 3 steps occuring always. We can see that the draws are getting approximately correctly estimated, but the wins are still being under or over estimated, likely giving worse results. 
 
 # Q3
 
@@ -887,7 +915,7 @@ Y = PLADat$Y
 
 #Y[Y == -1] = 0
 
-gm = 2
+gm = 1
 cf = 1
 dg = 2
 
@@ -897,8 +925,8 @@ yhat = mySVM$yhat
 padA = mySVM$padA
 
 
-par(mfrow = c(2,2))
-plot(X2~X1,pch = c(1,16)[(Y+1)/2+1], data = PLADat)
+#par(mfrow = c(2,2))
+#plot(X2~X1,pch = c(1,16)[(Y+1)/2+1], data = PLADat)
 plot(PLADat$X2~PLADat$X1, pch = 16, col = c('grey','blue')[(yhat+1)/2+1])
 
 wh.text = which(padA!=0)
@@ -913,16 +941,42 @@ text(PLADat$X2[wh.text]~PLADat$X1[wh.text],labels = paste0('n = ',wh.text))
 
 library('e1071')
 
-model  = svm(Y~(X1 + X2), data = PLADat, scale = FALSE,kernel = 'polynomial',degree =dg,gamma = gm,coef0 = cf,cost = 10000, type = "C")
+model  = svm(as.factor(Y)~(X1 + X2), data = PLADat, scale = TRUE,kernel = 'polynomial',degree =dg,gamma = gm,coef0 = cf,cost = 10000, type = "C-classification")
+
+yHatSVM = predict(model, data.frame(X1 = PLADat$X1, X2 = PLADat$X2))
+
+# x1_range <- seq(min(PLADat$X1), max(PLADat$X1), length.out = 200)
+# x2_range <- seq(min(PLADat$X2), max(PLADat$X2), length.out = 200)
+# grid <- expand.grid(X1 = x1_range, X2 = x2_range)
+# grid$pred <- predict(model, newdata = grid)
+# 
+# # Add the decision surface
+# z <- matrix(as.numeric(grid$pred), nrow = length(x1_range), byrow = TRUE)
+
+# Draw the decision boundary (where predicted class changes)
+
+plot(PLADat$X2 ~ PLADat$X1, col = yHatSVM)
+
+# contour(x1_range, x2_range, z, levels = c(1.5), add = TRUE, drawlabels = FALSE, lwd = 2)
 
 # Our solution
-plot(X2~X1, data = PLADat)
+#plot(X2~X1, data = PLADat)
 
-points(model$SV[,2]~model$SV[,1],pch = '+', col = 'blue',cex = 2)
+center <- model$x.scale$"scaled:center"
+scale  <- model$x.scale$"scaled:scale"
+
+sv_scaled <- model$SV
+
+sv_unscaled <- sweep(sv_scaled, 2, scale, FUN = "*")
+sv_unscaled <- sweep(sv_unscaled, 2, center, FUN = "+")
+
+
+points(sv_unscaled[,2]~sv_unscaled[,1],pch = '+', col = 'blue',cex = 2)
 N = dim(X)[1]
 plot(model$coefs~model$index,type = 'h',xlim = c(0,N))
 
 ```
 
+From this, we can see that both algorithims perform similarly. The number of non zero coefficients is similar, although the direction is only different due to how the SVM function displays them. We can also see similar performance in how the custom and SVM function classifies data points and the position of the support vectors.
 
 

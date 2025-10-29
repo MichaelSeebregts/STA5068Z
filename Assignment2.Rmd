@@ -10,6 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(magick)
 library(kableExtra)
 library(GA)
+
+set.seed(2024)
+RNGkind("L'Ecuyer-CMRG")
 ```
 
 \newpage
@@ -18,7 +21,6 @@ library(GA)
 
 ### Q1a
 ```{r Q1a}
-
 game_status=function(xt,objects, rad)
 {
   sk    = rep(0,dim(xt)[1])
@@ -84,7 +86,6 @@ plot_game = function(xt,objects,rad,cols = 1)
   lines(y_edge~x_edge)
   lines(c(0.25*y_edge)~c(0.25*x_edge),lty = 2)
 }
-
 
 play = function(x0,delt,objects,rad,theta,plt = FALSE,trace = FALSE)
 {
@@ -157,25 +158,16 @@ model = function(X,theta,nodes)
   return(list(a3 = t(a3)))
 }
 
-play_a_game = function(theta)
-{
-  xt    = draw_starts() 
-  res   = play(xt,delt,objects,rad,theta, trace = TRUE)
-  score = mean(res$status==1)
-  return(score)
-}
-
 control = function(xt,pars)
 {
   
   res_model = model(xt,pars,rep(nodes,2))
   return(res_model$a3)
 }
-#control(xt,theta_rand)
+
 ```
 
 ```{r Q1bi}
-set.seed(2024)
 J       =  50  
 objects = draw_objects(J)
 xt      = draw_starts()
@@ -197,11 +189,10 @@ p     = 2
 q     = 2
 nodes = 3
 npars = p*nodes+nodes*nodes+nodes*q+nodes+nodes+q
-#npars
 theta_rand = runif(npars,-1,1)
 
 obj = play_a_game
-GA  = ga(type = 'real-valued',fitness = play_a_game,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE, monitor = TRUE)
+GA  = ga(type = 'real-valued',fitness = play_a_game,lower = rep(-10,npars),upper = rep(10,npars), popSize = 100,maxiter = 200,keepBest = TRUE)
 plot(GA)
 
 
@@ -234,7 +225,6 @@ kable(propWins)
 ### ii
 
 ```{r Q1bii}
-
 winNewObjs = c()
 objectsNew = draw_objects(J)
 for(i in 1:100)
@@ -271,7 +261,6 @@ Can see that when measuring performance against the same trees, the model perfor
 
 ### i
 ```{r Q1ci}
-
 playAdj = function(x0,delt,objects,rad,theta,plt = FALSE,trace = FALSE)
 {
   k           =   0 # Count how many steps
@@ -628,7 +617,7 @@ kable(CombinedFullWinProb, caption = "Table of proportions using Tree Search")
 
 ```
 
-Can see that there are quite large differences between the true value and the estimated value. X wins are overestimated by 26%, O wins are underestimated by 20% and draws are underestimated by 16%. Considering these are pointe estimates, there is large amounts of volatility and so would make sense. 
+Can see that there are quite large differences between the true value and the estimated value. X wins are overestimated by 26%, O wins are underestimated by 20% and draws are underestimated by 16%. Considering these are points estimates, there is large amounts of volatility in the results and so would make sense that they are inaccurate. 
 
 ### Q2c
 
@@ -671,7 +660,7 @@ boxplot(df70[, 2:4], main = "Box plot of MCTS, alpha = 0.7")
 points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
 ```
 
-Can see that under alpha = 0.7, the median correctly captures the proportion of X wins, and the number of draws is within the range, and just outside the upper quartile. Under alpha = 0.9, we can see that X wins falls just outside the range, and considered an outlier while draws fall just outside the lower quartile. Under both alphas, we can see we underestimate the number of O wins. This is likely due to most O wins occuring towards the end of the game, which is not evaluated as frequently, as we there is only a 60% chance that a branch is evaluated completely under alpha = 0.9 and 0.17 under alpha = 0.7. Therefore we get O wins being consistently under estimated. 
+Can see that under alpha = 0.7, the median correctly captures the proportion of X wins, and the number of draws is within the range, and just outside the upper quartile. Under alpha = 0.9, we can see that X wins falls just outside the range, and considered an outlier while draws fall just outside the lower quartile. Under both alphas, we can see we underestimate the number of O wins. This is likely due to most O wins occuring towards the end of the game, which is not evaluated as frequently, as there is only a 60% chance that a branch is evaluated completely under alpha = 0.9 and 0.17 under alpha = 0.7. Therefore we get O wins being consistently under estimated. 
 
 The distribtion of alpha = 0.7, does appear to slightly perform better in estimating the win probabilities. Draws occur mostly early on in the game, and thus is has a much greater accuracy due to not having to evaluate many long branches. 
 

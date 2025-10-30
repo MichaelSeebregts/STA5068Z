@@ -56,7 +56,7 @@ game_status=function(xt,objects, rad)
 
 ### i
 
-```{r Q1bi processing, echo = FALSE}
+```{r Q1bi processing}
 options(scipen = 999)
 
 draw_objects = function(J)
@@ -219,7 +219,7 @@ for(i in 1:100)
 }
 
 propWins = data.frame("Proportion of successful navigations" = mean(win))
-kable(propWins)
+kable(propWins, caption = "Proportion of successful navigations, using previously generated trees")
 ```
 
 ### ii
@@ -247,14 +247,14 @@ for(i in 1:100)
 }
 
 propNewWins = data.frame("Proportion of successful navigations" = mean(winNewObjs))
-kable(propNewWins)
+kable(propNewWins, caption = "Proportion of successful navigations, using newly generated trees")
 ```
 
 
 
 ### iii
 
-Can see that when measuring performance against the same trees, the model performs relatively well with a proportion of 0.73 passing. However, when using new trees, the model performs much worse with only a proportion of  0.21 passing. This means that the model has not learned how to avoid objects, but simply how to avoid the given set of objects. 
+Can see that when measuring performance against the same trees, the model performs very well with a proportion of 0.99 passing. However, when using new trees, the model performs extremely poorly with no drones passing. This means that the model has not learned how to avoid objects, but simply how to avoid the given set of objects. 
 
 ### Q1c
 
@@ -359,7 +359,7 @@ for(i in 1:100)
 
 
 propWinsAdj = data.frame("Proportion of successful navigations" = mean(win_adj))
-kable(propWinsAdj)
+kable(propWinsAdj, caption = "Proportion of successful navigations, using previously generated trees")
 winNewObjs_adj = c()
 
 objectsNew = draw_objects(J)
@@ -384,11 +384,11 @@ for(i in 1:100)
 
 #mean(winNewObjs_adj)
 propNewWinsAdj = data.frame("Proportion of successful navigations" = mean(winNewObjs_adj))
-kable(propNewWinsAdj)
+kable(propNewWinsAdj, caption = "Proportion of successful navigations, using newly generated trees")
 ```
 ### ii
 
-We can see that in sample win probability has increased by , from  to . Similarly, when looking at win probability with new objects, we note an increase as well from , to .
+We can see that in sample win probability has decreased from 0.99 to 0.81, a 18% decrease. However, we see an increase from 0 to 0.24 win probability for when generating new trees. This still does not appear to have learnt to avoid trees, even though it is performing slightly better out of sample.
 
 
 ### Q1d
@@ -436,7 +436,7 @@ for(i in 1:100)
 
 
 prop_win_adj_newObs = data.frame("Proportion of successful navigations" = mean(win_adj_newObs))
-kable(prop_win_adj_newObs)
+kable(prop_win_adj_newObs, caption = "Proportion of successful navigations, using previously generated trees")
 winNewObjs_adj_genNewObs = c()
 
 for(i in 1:100)
@@ -456,14 +456,14 @@ for(i in 1:100)
   winNewObjs_adj_genNewObs[i] = (res_final$status==1)
 }
 prop_winNewObjs_adj_genNewObs = data.frame("Proportion of successful navigations" = mean(winNewObjs_adj_genNewObs))
-kable(prop_winNewObjs_adj_genNewObs)
+kable(prop_winNewObjs_adj_genNewObs, caption = "Proportion of successful navigations, using newly generated trees for each loop")
 ```
 
-The in sample win probability has now decreased, as we are taking new samples each time we play a game. However, we can see that the win probability increases out of sample, after we take new   
+The in sample probability has increased by 0.07 from the previous run, although still lower than from b i. However, the success probability is much higher for this run especially considering that each run uses a new generation of trees. Therefore it does appear that for this run, the model has learnt how to avoid trees in general although not perfect. 
 
 # Q2
 
-```{r Q2 processing, echo = FALSE}
+```{r Q2 processing}
 
 S = matrix(0,9,8)
 # Row Sums:
@@ -546,14 +546,14 @@ Unfinished8 = sum(res8==+2)
 #Games8 = c(n_g8,Xwins8,Draws8,Owins8, Unfinished8)
 games8 = data.frame("Number of moves" = 8, "Number of games" = n_g8, "X wins" = Xwins8, "O wins" = Owins8, "Draws" = Draws8)
 
-res9 = game_tree(m,1, 0, 9)
-n_g9  = 	length(res9)
-Xwins9 = sum(res9==-1)
-Draws9 = sum(res9== 0)
-Owins9 = sum(res9==+1)
-Unfinished9 = sum(res9==+2)
-CombinedFull = data.frame("Number of Games" = n_g9,"X wins" = Xwins9,"Draws" = Draws9, "O wins" = Owins9, "Unfinished games" = Unfinished9)
-CombinedFullWinProb = data.frame("Prop X wins" = Xwins9/n_g9,"Prop Draws" = Draws9/n_g9, "Prop O wins" = Owins9/n_g9)
+# res9 = game_tree(m,1, 0, 9)
+# n_g9  = 	length(res9)
+# Xwins9 = sum(res9==-1)
+# Draws9 = sum(res9== 0)
+# Owins9 = sum(res9==+1)
+# Unfinished9 = sum(res9==+2)
+# CombinedFull = data.frame("Number of Games" = n_g9,"X wins" = Xwins9,"Draws" = Draws9, "O wins" = Owins9, "Unfinished games" = Unfinished9)
+# CombinedFullWinProb = data.frame("Prop X wins" = Xwins9/n_g9,"Prop Draws" = Draws9/n_g9, "Prop O wins" = Owins9/n_g9)
 
 datQ2A = rbind(games5, games8)
 kable(datQ2A)
@@ -610,10 +610,19 @@ UnfinishedMCTS = sum(resMCTS==+2)
 MCTS = data.frame("Games" = n_gMCTS,"X Wins" = XwinsMCTS, "Draws" = DrawsMCTS, "O wins" = OwinsMCTS, "Unfinished Games" = UnfinishedMCTS)
 MCTSWinProb = data.frame("Prop X wins" = XwinsMCTS/n_gMCTS, "Prop Draws" = DrawsMCTS/n_gMCTS,"Prop O wins" = OwinsMCTS/n_gMCTS)
 
+resTS = game_tree(m, -1, 0, 9)
+n_gTS  = 	length(resTS)
+XwinsTS = sum(resTS==-1)
+DrawsTS = sum(resTS== 0)
+OwinsTS = sum(resTS==+1)
+UnfinishedTS = sum(resTS==+2)
+TS = data.frame("Games" = n_gTS,"X Wins" = XwinsTS, "Draws" = DrawsTS, "O wins" = OwinsTS, "Unfinished Games" = UnfinishedMCTS)
+TSWinProb = data.frame("Prop X wins" = XwinsTS/n_gTS, "Prop Draws" = DrawsTS/n_gTS,"Prop O wins" = OwinsTS/n_gTS)
+
 kable(MCTS, caption = "Table of results using Monte Carlo Tree Search, alpha = 0.95")
-kable(CombinedFull, caption = "Table of results using Tree Search")
+kable(TS, caption = "Table of results using Tree Search")
 kable(MCTSWinProb, caption = "Table of proportions using Monte Carlo Tree Search, alpha = 0.95")
-kable(CombinedFullWinProb, caption = "Table of proportions using Tree Search")
+kable(TSWinProb, caption = "Table of proportions using Tree Search")
 
 ```
 
@@ -655,9 +664,9 @@ colnames(df90) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete")
 colnames(df70) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete")
 
 boxplot(df90[, 2:4], main = "Box plot of MCTS, alpha = 0.9")
-points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
+points(c(TS$X.Wins, TS$Prop.Draws, TS$Prop.O.wins), pch = "*", col = "red", cex = 3)
 boxplot(df70[, 2:4], main = "Box plot of MCTS, alpha = 0.7")
-points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
+points(c(TS$Prop.X.wins, TS$Prop.Draws, TS$Prop.O.wins), pch = "*", col = "red", cex = 3)
 ```
 
 Can see that under alpha = 0.7, the median correctly captures the proportion of X wins, and the number of draws is within the range, and just outside the upper quartile. Under alpha = 0.9, we can see that X wins falls just outside the range, and considered an outlier while draws fall just outside the lower quartile. Under both alphas, we can see we underestimate the number of O wins. This is likely due to most O wins occuring towards the end of the game, which is not evaluated as frequently, as there is only a 60% chance that a branch is evaluated completely under alpha = 0.9 and 0.17 under alpha = 0.7. Therefore we get O wins being consistently under estimated. 
@@ -758,9 +767,9 @@ colnames(df90_Branch_new) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete"
 colnames(df70_Branch_new) = c("Games", "Xwins%", "Ties%", "Owins%", "Incomplete")
 
 boxplot(df90_Branch_new[, 2:4], ylim = c(0, 1), main = "Box plot of MCTS, alpha = 0.9 with minimum of 3 steps")
-points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
+points(c(TS$Prop.X.wins, TS$Prop.Draws, TS$Prop.O.wins), pch = "*", col = "red", cex = 3)
 boxplot(df70_Branch_new[, 2:4], ylim = c(0, 1), main = "Box plot of MCTS, alpha = 0.7 with minimum of 3 steps")
-points(c(CombinedFullWinProb$Prop.X.wins, CombinedFullWinProb$Prop.Draws, CombinedFullWinProb$Prop.O.wins), pch = "*", col = "red", cex = 3)
+points(c(TS$Prop.X.wins, TS$Prop.Draws, TS$Prop.O.wins), pch = "*", col = "red", cex = 3)
 
 ```
 

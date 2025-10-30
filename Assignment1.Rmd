@@ -554,6 +554,8 @@ The variance is increasing for increasing levels of noise. This is because as we
 
 Similarly, the test error increases for increasing levels of noise, can see this for both ways of measuring Expected Out of Sample Error. When estimated test error with bias and variance, due to bias staying the same while variance increases for both H1 and H2, we can explain the test error increasing. When calculating test error directly, as the noise increases $g^{D}(x)$ while change more variable, resulting in it differing from f(x) more, meaning $(\bar{g}(x) - f(x))^2$ will increase. H2 has a lower test error due to the sin and cos function simply follow the underlying distribution much more closely. 
 
+Therefore, H2 appears to be the better model. H2 has lower Out of sample error under both methods of calculation, both estimating out of sample error directly and estimating through variance + $bias^2$. This is as expected, due to the wave like nature of the underlying DGP. 
+
 \newpage
 # Question 4
 
@@ -746,7 +748,7 @@ res_fitted = neural_net(XX,YY,res_opt_final$estimate,m,0)
 
 plot(XX[,2]~XX[,1], pch = 16, col = color.gradient(max.col(t(res_fitted$A2))), ylab = "X2", xlab = "X1", main = "Response curve")
 points(X$X2~X$X1, col = max.col(Y), pch = 16)
-legend("bottomright", legend = c("alpha", "beta", "rho"), col = c("cyan", "orange", "magenta"), lty = 1)
+legend("bottomright", legend = c("alpha", "beta", "rho"), col = c("cyan", "orange", "magenta"), lty = 1, bg = "white")
 
 
 
